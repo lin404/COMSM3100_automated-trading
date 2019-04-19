@@ -1,6 +1,6 @@
 # COMSM3100_automated-trading
 
-# Outline
+## Outline
 
 Develop a series of simulation experiments that enable studying the performance of adaptive automated trading strategies that can choose between more than one possible venue for executing a trade. Explore the performance of automated trading algorithms AA and ZIP in multi-venue environments.
 
@@ -23,7 +23,7 @@ Develop a series of simulation experiments that enable studying the performance 
 - Strategies for automated trading.
 - Performance analysis of AA and ZIP.
 
-# Proposed Approach/Methodology/Research Questions
+## Proposed Approach/Methodology/Research Questions
 
 - Simulation of multi-venue
 
