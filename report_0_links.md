@@ -22,6 +22,7 @@
 [Efficient electricity markets](https://ieeexplore-ieee-org.bris.idm.oclc.org/document/6652391)
 [A study of dark pool trading using an agent-based model](https://ieeexplore-ieee-org.bris.idm.oclc.org/document/6611692/references#references)
 
+[Application of evolutionary computation for rule discovery in stock algorithmic trading: A literature review](https://www.sciencedirect.com/science/article/pii/S156849461500438X)
 
 [Automated trading systems based on order book imbalance](https://ieeexplore-ieee-org.bris.idm.oclc.org/document/7970733)
 [Performance analysis of the parallel code execution for an algorithmic trading system, generated from UML models by end users](https://ieeexplore-ieee-org.bris.idm.oclc.org/document/7084518)
