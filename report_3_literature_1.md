@@ -1,36 +1,22 @@
 # Performance Comparison of Automated Trading Algorithms
 
+- Objective of the literature review
+- Overview of the subject under consideration.
+- Clear categorization of sources selected into those in support of your topic
+- particular position, those opposed, and those offering completely different arguments.
+- Discussion of both the distinctiveness of each source and its similarities with the others.
+
 ## Literature Review/Technical Background/Competitor Analysis - 1
 
-During the past decade, due to the computerisation of orders, the world has gradually been moving towards automated trading. There is a large volume of published studies describing the role of algorithmic trading in electronic financial markets. To better understand algorithmic trading, Nuti, Mirghaemi, Treleaven and Yingsaeree's [work](https://ieeexplore-ieee-org.bris.idm.oclc.org/document/5696713) presents the different types of trading, how a trade is executed in an exchange, and the objectives and challenges.
+During the past decade, as a result of the computerisation of orders, the world has gradually been moving towards electronic trading. A considerable amount of literature has been published on algorithmic trading. To better understand algorithmic trading, the [study](https://ieeexplore-ieee-org.bris.idm.oclc.org/document/5696713) of Nuti, Mirghaemi, Treleaven and Yingsaeree give a review of algorithmic trading. The type of trading can be categorised into the broker and proprietary. Both AA and ZIP trading algorithms can be considered as broker algorithmic trading systems, the strategy behind is to minimize the cost of trading by minimizing market impact cost or execution time, optimizing the price, and so on. The trading process of algorithmic trading can be slite into four steps: pre-trade analysis, trading signal generation, trade execution, and post-trade analysis. Algorithmic trading can be used at any stage of the trading process for various purposes, such as market making, spread trading, arbitrage, and macrotrading. Both AA and ZIP trading algorithms are used in trade execution for spread trading. There are many variants to the order book model including limit orders, market orders, stop-loss orders, and so on. The two main types of trades are market orders and limit orders. Both AA and ZIP trading algorithms are used for limit orders. A limit order guarantees the execution price, but it may be executed only partially or not at all. Different exchanges will accept different order types. Choose proper trading venues, liquidity, trading mechanism, degree of trader anonymity, and differential execution costs are considered as some of the most important characteristics. In general, a highly liquid market is prefered, owing to the fast trade execution and low transaction costs. Consequently, in developing an algorithmic trading system, understanding of the market microstructure, and how trades occur and orders interact in a specific market is of paramount importance.
+
+TURQUOISE PLATO will be used as the trading venues.
+Turquoise (majority owned by LSE) and Plato Partnership (not-for-profit consortium comprising buy and sell side) provies trading services 
+Turquoise Plato Block Discovery (TPBD) is a partnership between the LSE’s Turquoise and the Plato Partnership, a not-for-profit consortium of large buy- and sell-side firms. 
+Trading mechanism, Conditional order service aimed at trading larger blocks. Interacts with Plato Uncross and matches conditional orders at randomised intervals. Includes size priority in the matching logic and user defined minimum execution size
 
 
-A large and growing body of literature has investigated the impact of algorithmic trading on the financial markets. The relative literatures have highlighted that algorithmic trading may affect liquidity and volatility of the market.
-
-2. [Does Algorithmic Trading Improve Liquidity?](https://onlinelibrary-wiley-com.bris.idm.oclc.org/doi/full/10.1111/j.1540-6261.2010.01624.x)
-
-In the same vein,
-
-3. [Algorithmic Trading and the Market for Liquidity](https://www-cambridge-org.bris.idm.oclc.org/core/services/aop-cambridge-core/content/view/C1A34D3767436529EA4F23DB1780273C/S0022109013000471a.pdf/algorithmic_trading_and_the_market_for_liquidity.pdf)
-
-In this study, among the nuromebr automated trading algorithm, Zero-Intelligence Plus (ZIP) and Adaptive Aggressiveness (AA) are 
-
-The existing literature on AA and ZIP is extensive and focuses particularly on CDA market. Previous research has established that AA offers the best performance of any published bidding strategy.
-
-1. [Evaluation of the “Adaptive-Aggressive” Trading-Agent Strategy Against Human Traders in CDA: AA Wins](https://www.researchgate.net/profile/Dave_Cliff/publication/267767159_Evaluation_of_the_Adaptive-Aggressive_Trading-Agent_Strategy_Against_Human_Traders_in_CDA_AA_Wins/links/54b791d40cf2bd04be33a4e5.pdf)
-2. [Zero Intelligence Plus and Gjerstad-Dickhaut Agents for Sealed Bid Auctions](https://pdfs.semanticscholar.org/ddd6/67a415a71c1ac17270ed2cc8ddac06234d16.pdf)
-3. [TOO FAST – TOO FURIOUS: Faster Financial-Market Trading Agents Can Give Less Efficient Markets](https://www.researchgate.net/profile/John_Cartlidge/publication/273060607_Too_fast_too_furious_Faster_financial_market_trading_agents_can_give_less_efficient_markets/links/55882dfa08aeb29944448104.pdf)
-4. [Exhaustive Testing of Trader-agents in Realistically Dynamic Continuous Double Auction Markets: AA Does Not Dominate](local)
-
-However, there are relatively few historical studies in the area of multi-venue trading.
-
-1. [Intelligent trading architecture](https://onlinelibrary-wiley-com.bris.idm.oclc.org/doi/full/10.1002/cpe.3690)
-2. [Limit order placement across multiple exchanges](https://ieeexplore-ieee-org.bris.idm.oclc.org/document/6327772)
-
-What we know about automated trading algorithms is largely based on observational studies. Much of the current literature on algorithmic trading systems pays particular attention to appropriate simulated environment. Most researchers investigating AA and ZIP have utilised Open Exchange (OpEx).
-
-1. [An Open-Source Limit-Order-Book Exchange for Teaching and Research](https://ieeexplore.ieee.org/abstract/document/8628760)
-2. [BSE: A Minimal Simulation of a Limit-Order-Book Stock Exchange](https://arxiv.org/abs/1809.06027)
+Specify the degree of risk aversion (that is, how much to penalize variance relative to expected cost), which indicates the level of trading aggressiveness or passiveness.
+Aggressive trading is associated with higher cost and less risk, whereas passive trading is associated with lower market impact and higher risk. An arithmetic random walk is often the most popular model for specifying the dynamics of future market prices. Given specifications of all the factors, an optimal trading strategy for a specific trading objective might be obtained by solving the corresponding stochastic dynamic optimization problem.
 
 
-1. [Algorithmic Trading](https://ieeexplore-ieee-org.bris.idm.oclc.org/document/5696713)

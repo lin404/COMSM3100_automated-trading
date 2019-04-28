@@ -12,6 +12,7 @@
 [My Family and Other Algorithms](https://eprints.soton.ac.uk/264236/1/ZIP_1500wV2_ep.pdf)
 
 ## markets & algorithmic trading
+[Algorithmic Trading](https://ieeexplore-ieee-org.bris.idm.oclc.org/document/5696713)
 [High Frequency Trading](https://www.quantstart.com/articles/high-frequency-trading-i-introduction-to-market-microstructure)
 [Rise of the Machines: Algorithmic Trading in the Foreign Exchange Market](https://onlinelibrary-wiley-com.bris.idm.oclc.org/doi/full/10.1111/jofi.12186)
 [Does Algorithmic Trading Improve Liquidity?](https://onlinelibrary-wiley-com.bris.idm.oclc.org/doi/full/10.1111/j.1540-6261.2010.01624.x)
@@ -21,6 +22,7 @@
 [INTERNATIONAL EVIDENCE ON ALGORITHMIC TRADING](http://www.fmaconferences.org/Orlando/Papers/BFW_v11_Sep_17_2015_full.pdf)
 [Efficient electricity markets](https://ieeexplore-ieee-org.bris.idm.oclc.org/document/6652391)
 [A study of dark pool trading using an agent-based model](https://ieeexplore-ieee-org.bris.idm.oclc.org/document/6611692/references#references)
+
 
 [Application of evolutionary computation for rule discovery in stock algorithmic trading: A literature review](https://www.sciencedirect.com/science/article/pii/S156849461500438X)
 
@@ -66,3 +68,8 @@
 
 [TOO FAST – TOO FURIOUS: Faster Financial-Market Trading Agents Can Give Less Efficient Markets](https://seis.bristol.ac.uk/~cszjpc/slides/cartlidge-icaart-2012.pdf)
 (https://www.researchgate.net/profile/John_Cartlidge/publication/273060607_Too_fast_too_furious_Faster_financial_market_trading_agents_can_give_less_efficient_markets/links/55882dfa08aeb29944448104.pdf)
+
+
+[Improving the Strategies of Algorithmic Traders and Investigating Further Realism in their Market Environment](http://carlhenrik.com/COMSM0111/bin/dissertations/ss8164.pdf)
+
+
