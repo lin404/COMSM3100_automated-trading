@@ -73,3 +73,11 @@
 [Improving the Strategies of Algorithmic Traders and Investigating Further Realism in their Market Environment](http://carlhenrik.com/COMSM0111/bin/dissertations/ss8164.pdf)
 
 
+
+
+## REFERENCE
+[D. Cliff and J. Bruten. Minimal-intelligence agents for bargaining behaviours in
+market-based environments. Technical Report HPL-97-91, HP, 1997.](https://www.hpl.hp.com/techreports/97/HPL-97-91.pdf)
+[P. Vytelingum. The Structure and Behaviour of the Continuous Double Auction. PhD
+thesis, University of Southampton, 2006.](https://eprints.soton.ac.uk/263234/1/THESIS.pdf)
+

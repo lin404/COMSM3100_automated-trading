@@ -10,6 +10,7 @@ Financial markets with fully electronic execution and similar electronic communi
 Till 1998 U.S Securities and Exchange Commission (SEC) authorized electronic exchanges paving the way for computerized High Frequency Trading. HFT was able to execute trades 1000 times faster than a human. And since that time high-frequency trading (HFT) has become widespread.
 
 ### The brief history of algo trading and electronic markets
+During the past decade, as a result of the computerisation of orders, the world has gradually been moving towards electronic trading. 
 
 Automated trading systems usually refer to computer programs that create orders and automatically submit trades to an exchange. In general, these systems are deployed for highly liquid markets known as high-frequency trading (HFT).
 
