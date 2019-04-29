@@ -2,6 +2,8 @@
 
 ## Executive Summary
 
+We report on a series of simulation experiments in which we study the performance of adaptive automated trading strategies on a trading venue that offers a coupled pair of trading exchanges: one a dark pool and the other a lit pool. Our model is directly inspired by the London Stock Exchange’s Turquoise PlatoTM venue which offers dark-pool functionality alongside the complementary lit-pool trading venue called Turquoise LitTM. We refer to this generic structure as a coupled venue. In this paper we report on our experience from taking adaptive trading strategies that have previously been demonstrated in the literature to work well on traditional lit limit-order-book (LOB) markets, and modifying them to be able to take advantage of the trading opportunities offered by a CV. Specifically, we study the GDX and ZIP trading algorithms, adapted for trading on a coupled venue (CV): our CV is an appropriately modified version of the Bristol Stock Exchange (BSE) open-source simulator of a LOB-based financial market. Our primary findings are WHAT and WHAT and WHAT.
+
 ### Aim and Objectives
 
 The aim of this project is to examine which automated trading algorithms Adaptive Aggressive (AA) and Zero-Intelligence Plus (ZIP) performs better in multi-venue environments.
@@ -19,15 +21,12 @@ The objectives of this project are to:
 7. write up a thesis reflecting and evaluating the final product and work performed.
 
 Summary of Aims and Objectives
+
 1. Discover whether continuous replenishment can change the dominance hierarchy of traders
 in an agent-only market.
-2. Replicate and scrutinise previous experimental results, using the new ExPo platform, to
-test validity of previous results.
-3. Improving the suitability and adaptability of existing agent strategies (AA and ZIP) to
-real life markets.
-4. Use the in-development ExPo trading platform to perform this study of multi-agent
-performance by building automation scripts, stress-testing it and demonstrating the suitability
-and usability of ExPo for future algorithmic trading research.
+2. Replicate and scrutinise previous experimental results, using the new ExPo platform, to test validity of previous results.
+3. Improving the suitability and adaptability of existing agent strategies (AA and ZIP) to real life markets.
+4. Use the in-development ExPo trading platform to perform this study of multi-agent performance by building automation scripts, stress-testing it and demonstrating the suitabilityand usability of ExPo for future algorithmic trading research.
 5. Investigate the effect of dynamic markets (market shocks) on both naive and adapted
 algorithms to further improve realism.
 6. To have developed everything needed for other researchers to further extend the research

@@ -1,18 +1,25 @@
 
 # Performance Comparison of Automated Trading Algorithms
 
+- Grab the attention of your reader – start with something interesting and unique. Get a fact or question that makes your reader engaged and interested in reading this particular paper.
+- Always stick to the formal language and tone – academic writing is very strict to everything about the paper format. Essay introduction is not an exception. Consider informal style only if it is requested or allowed by your tutor.
+- Keep your essay introduction example conscious – suggest your paragraph being brief and striking but leaving some space for imagination. Do not use lots of details.
+
+* Start with a question
+* Include an interesting fact
+* Be personal
+* Repeat your topic description
+
 ## Introduction/Motivation
 
-Back in the 1980s, 
+### The brief history of algo trading and electronic markets
+During the past decade, as a result of the computerisation of orders, the world has gradually been moving towards electronic trading.
+
+Automated trading systems usually refer to computer programs that create orders and automatically submit trades to an exchange. In general, these systems are deployed for highly liquid markets known as high-frequency trading (HFT).
 
 Financial markets with fully electronic execution and similar electronic communication networks developed in the late 1980s and 1990s. In the U.S., decimalization, which changed the minimum tick size from 1/16 of a dollar (US$0.0625) to US$0.01 per share, may have encouraged algorithmic trading as it changed the market microstructure by permitting smaller differences between the bid and offer prices, decreasing the market-makers’ trading advantage, thus increasing market liquidity.
 
 Till 1998 U.S Securities and Exchange Commission (SEC) authorized electronic exchanges paving the way for computerized High Frequency Trading. HFT was able to execute trades 1000 times faster than a human. And since that time high-frequency trading (HFT) has become widespread.
-
-### The brief history of algo trading and electronic markets
-During the past decade, as a result of the computerisation of orders, the world has gradually been moving towards electronic trading. 
-
-Automated trading systems usually refer to computer programs that create orders and automatically submit trades to an exchange. In general, these systems are deployed for highly liquid markets known as high-frequency trading (HFT).
 
 Back in the 1980s, program trading was used on the New York Stock Exchange, with arbitrage traders pre-programming orders to automatically trade when the S&P500’s future and index prices were far apart. As markets moved to become fully electronic, human presence on a trading floor gradually became redundant, and the rise of high-frequency traders emerged. A special class of algo traders with speed and latency advantage of their trading software emerged to react faster to order flows.
 

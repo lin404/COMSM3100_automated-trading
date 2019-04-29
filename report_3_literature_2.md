@@ -1,37 +1,30 @@
 # Performance Comparison of Automated Trading Algorithms
 
-We report on a series of simulation experiments in which we study the performance of adaptive automated trading strategies on a trading venue that offers a coupled pair of trading exchanges: one a dark pool and the other a lit pool. Our model is directly inspired by the London Stock Exchange’s Turquoise PlatoTM venue which offers dark-pool functionality alongside the complementary lit-pool trading venue called Turquoise LitTM. We refer to this generic structure as a coupled venue. In this paper we report on our experience from taking adaptive trading strategies that have previously been demonstrated in the literature to work well on traditional lit limit-order-book (LOB) markets, and modifying them to be able to take advantage of the trading opportunities offered by a CV. Specifically, we study the GDX and ZIP trading algorithms, adapted for trading on a coupled venue (CV): our CV is an appropriately modified version of the Bristol Stock Exchange (BSE) open-source simulator of a LOB-based financial market. Our primary findings are WHAT and WHAT and WHAT.
-
 ## Literature Review/Technical Background/Competitor Analysis - 2
 
 Execept original work, what we know about ZIP is largely based upon empirical studies that investigate its performance in a particular market. In the [report](1) published by R. Das, J. E. Hanson, J. O. Kephart, and G. Tesauro in 2001, it illustrated that ZIP agents outperformed human traders in all experiments. Due to the description in the report: The members of the IBM Watson Experimental Economics Laboratory (WEEL) developed GEM which is a special-purpose distributed system for experimental economics. Magenta is a prototype agent environment developed at IBM Resea. Das et al. developed a hybrid system combined GEM with Magenta for the experiments with humans and agents. In the experiments, two different timer periods are used for the different algorithms: “fast” agents were defined as 1 second; and “slow” agents were defined as 5 second. The results presented in the experiments employed Gjerstad-Dickhaut (GD) fast agents and ZIP slow agents. The interviews with human subjects draws our attention to a weakness in the ZIP strategy. That is if using a specific non-optimal human strategy such as ‘fixed-profit-ratio’, the ZIP agents performed badly. However, Das et al. implemented a modification to the ZIP strategy. As Das et al. observes: `Preliminary results show that the modified ZIP agents retain high efficiency and are not easily misled by the fixed-profit-ratio agent.`. In conclusion, the agents utilized established algorithms, ZIP and GD, outperform non-expert human subjects. As the further work, Das et al. suggests testing their bidding agents against professional equities or commodities traders would assist to uncover more weaknesses in the strategies, thereby leading to significant improvements in the strategies.
-To date, several studies have investigated the AA algorithmic trading. A Conference paper was 
 
-2012
+To date, several studies have investigated the role of AA trader-agent strategy in the markets. A Conference [paper](2) was published by J. Cartlidge, C. Szostek, M. De Luca and D. Cliff in 2012. They explored the performance of AA-ultra and AA-slow to investigate markets efficiency. AA-ultra is a fast trader-agents which interval time is 0.1s, and AA-slow is slow trader-agents which interval time is 10s and agents perform further internal calculations every 2.5s. For market simulation environment, they applied a new series of artificial trading experiments using the OpEx experimental economics system first introduced at ICAART2011. In their experiments, the market was reset every time before starting the experiment. Each experiment lasted 20 minutes. 3 buyers and 3 sellers each, total 6 human participants and 6 trader-agents traded in the market. AA-slow and AA-ultra were homogeneously configured as the trader-agents respectively. As the results presented in their experiments, there 
+ the significance of
+the differences between the results from the AA-ultra
+experiments and those from AA-slow
 
 
-### [Evaluation of the “Adaptive-Aggressive” Trading-Agent Strategy Against Human Traders in CDA: AA Wins](https://www.researchgate.net/profile/Dave_Cliff/publication/267767159_Evaluation_of_the_Adaptive-Aggressive_Trading-Agent_Strategy_Against_Human_Traders_in_CDA_AA_Wins/links/54b791d40cf2bd04be33a4e5.pdf)
 
+
+in the same vein
+Previous research have established that AA offers the best performance of any published bidding strategy.
+A makes a similar point / builds on the work of B 
 the performance of Adaptive Aggressive (AA), a new agent strategy, and ZIP, GD and GDX are investigated in both humans vs. agent and agent vs. agent contexts. Open Exchange (OpEx), an experimental algorithmic trading platform, is used to simulate an electronic trading system. Multiple instances can be developed in Agent Host using OpEx framework. Each Agent implements one specific algorithm and has its own configuration settings. GD algorithm seeks an order price which maximises the product of the “belief” functions built from the observed market data. Addition to that, GDX employs Dynamic Programming (DP) to price orders. The Adaptive Aggressiveness (AA) trading algorithm contains two individual components, a short-term and a long-term one. The short-term learning mechanism is used to react promptly to market fluctuations. The long-term learning process aid in making bidding decisions. In total, nine of human vs. agent experiments was implemented, three for each of ZIP, GDX and AA. Overall, the agents performed better than humans. In addition, AA performed the best which gained 27% profit greater than humans. AA, ZIP and GDX were compared to each other in pure robot vs. robot markets. In result, GDX beat ZIP, and AA defeated both GDX and ZIP. Moreover, the mean number of rounds per experiment won of AA is higher than GDX. 
 
 
-Previous research have established that AA offers the best performance of any published bidding strategy.
-
-A makes a similar point / builds on the work of B 
-
-
-In the same vein,
-
-
-
-
 X has been found to oppose the anti-inflammatory actions of Y on Z (Alourfi, 2004).
-
-4. [Exhaustive Testing of Trader-agents in Realistically Dynamic Continuous Double Auction Markets: AA Does Not Dominate](local)
-
-
 
 
 1. [R. Das, J. E. Hanson, J. O. Kephart, and G. Tesauro. Agent-human interactions in the continuous double auction. The Proceedings of the International Joint Conferences on Artificial Intelligence (IJCAI), Seattle, USA (August, 2001), 2001.](https://s3.amazonaws.com/academia.edu.documents/44417575/das.pdf?AWSAccessKeyId=AKIAIWOWYYGZ2Y53UL3A&Expires=1556512970&Signature=JT7dTpWP0YqQRQx1avBwaZBS3uk%3D&response-content-disposition=inline%3B%20filename%3DAgent-Human_Interactions_in_the_Continuo.pdf)
 
 2. [TOO FAST – TOO FURIOUS: Faster Financial-Market Trading Agents Can Give Less Efficient Markets](https://www.researchgate.net/profile/John_Cartlidge/publication/273060607_Too_fast_too_furious_Faster_financial_market_trading_agents_can_give_less_efficient_markets/links/55882dfa08aeb29944448104.pdf)
+
+3. [Evaluation of the “Adaptive-Aggressive” Trading-Agent Strategy Against Human Traders in CDA: AA Wins](https://www.researchgate.net/profile/Dave_Cliff/publication/267767159_Evaluation_of_the_Adaptive-Aggressive_Trading-Agent_Strategy_Against_Human_Traders_in_CDA_AA_Wins/links/54b791d40cf2bd04be33a4e5.pdf)
+
+4. [Exhaustive Testing of Trader-agents in Realistically Dynamic Continuous Double Auction Markets: AA Does Not Dominate](local)
