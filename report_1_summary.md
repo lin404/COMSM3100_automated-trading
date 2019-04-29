@@ -20,20 +20,6 @@ The objectives of this project are to:
 6. identify the valid elements which affecting performance, research the associated works, ideally improve their performance.
 7. write up a thesis reflecting and evaluating the final product and work performed.
 
-Summary of Aims and Objectives
-
-1. Discover whether continuous replenishment can change the dominance hierarchy of traders
-in an agent-only market.
-2. Replicate and scrutinise previous experimental results, using the new ExPo platform, to test validity of previous results.
-3. Improving the suitability and adaptability of existing agent strategies (AA and ZIP) to real life markets.
-4. Use the in-development ExPo trading platform to perform this study of multi-agent performance by building automation scripts, stress-testing it and demonstrating the suitabilityand usability of ExPo for future algorithmic trading research.
-5. Investigate the effect of dynamic markets (market shocks) on both naive and adapted
-algorithms to further improve realism.
-6. To have developed everything needed for other researchers to further extend the research
-presented here with the greatest of ease, and to provide direction by recommending
-important extensions for future research.
-
-
 ### Deliverables
 
 - Based on London Stock Exchange’s Turquoise PlatoTM, study about the trading venues implemented in the real world, ensure simulation environments are close to the practical venues as much as possible.
