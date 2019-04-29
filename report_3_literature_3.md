@@ -16,12 +16,12 @@ Algorithmic trading systems have been widely used in all major markets around th
 
 At trade execution, the execution model executes the trades, making several decisions with constraints on (actual) transaction costs and trading duration. The most general decision is the trading strategy followed by the venue and order type.
 
-The existing literature focuses particularly on continuous double-auction (CDA) market.
-However, there are relatively few historical studies in the area of multi-venue trading.
+The majority of popular research has focused on regular-sized bids and offers. However, there are relatively few studies in the area of block trading.
+
 
 [A study of dark pool trading using an agent-based model](https://ieeexplore-ieee-org.bris.idm.oclc.org/document/6611692/references#references)
 
-There is a relatively small body of literature that is concerned with …
+in addition to that, There is a relatively small body of literature that is concerned with multi-venue trading
 
 1. [Intelligent trading architecture](https://onlinelibrary-wiley-com.bris.idm.oclc.org/doi/full/10.1002/cpe.3690)
 2. [Limit order placement across multiple exchanges](https://ieeexplore-ieee-org.bris.idm.oclc.org/document/6327772)
