@@ -10,6 +10,11 @@
 
 ## ZIP
 [My Family and Other Algorithms](https://eprints.soton.ac.uk/264236/1/ZIP_1500wV2_ep.pdf)
+[Agent-Human Interactions in the Continuous Double Auction](https://s3.amazonaws.com/academia.edu.documents/44417575/das.pdf?AWSAccessKeyId=AKIAIWOWYYGZ2Y53UL3A&Expires=1556512970&Signature=JT7dTpWP0YqQRQx1avBwaZBS3uk%3D&response-content-disposition=inline%3B%20filename%3DAgent-Human_Interactions_in_the_Continuo.pdf)
+[High-Performance Bidding Agents for the Continuous Double Auction](http://delivery.acm.org.bris.idm.oclc.org/10.1145/510000/501183/p206-tesauro.pdf?ip=154.59.124.153&id=501183&acc=ACTIVE%20SERVICE&key=BF07A2EE685417C5%2E3DCFD3605FE4B4CE%2E4D4702B0C3E38B35%2E4D4702B0C3E38B35&__acm__=1556509776_a32285177b99e34e8170f995e21e82a9)
+
+## ZIP && AA
+[Strategic bidding in continuous double auctions](https://www.sciencedirect.com/science/article/pii/S0004370208000787)
 
 ## markets & algorithmic trading
 [Algorithmic Trading](https://ieeexplore-ieee-org.bris.idm.oclc.org/document/5696713)
@@ -76,8 +81,6 @@
 
 
 ## REFERENCE
-[D. Cliff and J. Bruten. Minimal-intelligence agents for bargaining behaviours in
-market-based environments. Technical Report HPL-97-91, HP, 1997.](https://www.hpl.hp.com/techreports/97/HPL-97-91.pdf)
-[P. Vytelingum. The Structure and Behaviour of the Continuous Double Auction. PhD
-thesis, University of Southampton, 2006.](https://eprints.soton.ac.uk/263234/1/THESIS.pdf)
-
+[D. Cliff and J. Bruten. Minimal-intelligence agents for bargaining behaviours in market-based environments. Technical Report HPL-97-91, HP, 1997.](https://www.hpl.hp.com/techreports/97/HPL-97-91.pdf)
+[P. Vytelingum. The Structure and Behaviour of the Continuous Double Auction. PhD thesis, University of Southampton, 2006.](https://eprints.soton.ac.uk/263234/1/THESIS.pdf)
+[R. Das, J. E. Hanson, J. O. Kephart, and G. Tesauro. Agent-human interactions in the continuous double auction. The Proceedings of the International Joint Conferences on Artificial Intelligence (IJCAI), Seattle, USA (August, 2001), 2001.](https://s3.amazonaws.com/academia.edu.documents/44417575/das.pdf?AWSAccessKeyId=AKIAIWOWYYGZ2Y53UL3A&Expires=1556512970&Signature=JT7dTpWP0YqQRQx1avBwaZBS3uk%3D&response-content-disposition=inline%3B%20filename%3DAgent-Human_Interactions_in_the_Continuo.pdf)

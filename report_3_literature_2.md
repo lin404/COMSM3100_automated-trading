@@ -4,7 +4,10 @@ We report on a series of simulation experiments in which we study the performanc
 
 ## Literature Review/Technical Background/Competitor Analysis - 2
 
-Execept original work, what we know about AA and ZIP is largely based upon empirical studies that investigate their performance in continuous double auction (CDA) markets. A. J. Bagnall and I. E. Toft 
+Execept original work, what we know about ZIP is largely based upon empirical studies that investigate its performance in a particular market. In the [report](1) published by R. Das, J. E. Hanson, J. O. Kephart, and G. Tesauro in 2001, it illustrated that ZIP agents outperformed human traders in all experiments. Due to the description in the report: The members of the IBM Watson Experimental Economics Laboratory (WEEL) developed GEM which is a special-purpose distributed system for experimental economics. Magenta is a prototype agent environment developed at IBM Resea. Das et al. developed a hybrid system combined GEM with Magenta for the experiments with humans and agents. In the experiments, two different timer periods are used for the different algorithms: “fast” agents were defined as 1 second; and “slow” agents were defined as 5 second. The results presented in the experiments employed Gjerstad-Dickhaut (GD) fast agents and ZIP slow agents. The interviews with human subjects draws our attention to a weakness in the ZIP strategy. That is if using a specific non-optimal human strategy such as ‘fixed-profit-ratio’, the ZIP agents performed badly. However, Das et al. implemented a modification to the ZIP strategy. As Das et al. observes: `Preliminary results show that the modified ZIP agents retain high efficiency and are not easily misled by the fixed-profit-ratio agent.`. In conclusion, the agents utilized established algorithms, ZIP and GD, outperform non-expert human subjects. As the further work, Das et al. suggests testing their bidding agents against professional equities or commodities traders would assist to uncover more weaknesses in the strategies, thereby leading to significant improvements in the strategies.
+To date, several studies have investigated the AA algorithmic trading. A Conference paper was 
+
+2012
 
 
 ### [Evaluation of the “Adaptive-Aggressive” Trading-Agent Strategy Against Human Traders in CDA: AA Wins](https://www.researchgate.net/profile/Dave_Cliff/publication/267767159_Evaluation_of_the_Adaptive-Aggressive_Trading-Agent_Strategy_Against_Human_Traders_in_CDA_AA_Wins/links/54b791d40cf2bd04be33a4e5.pdf)
@@ -16,14 +19,19 @@ Previous research have established that AA offers the best performance of any pu
 
 A makes a similar point / builds on the work of B 
 
-2. [Zero Intelligence Plus and Gjerstad-Dickhaut Agents for Sealed Bid Auctions](https://pdfs.semanticscholar.org/ddd6/67a415a71c1ac17270ed2cc8ddac06234d16.pdf)
 
 In the same vein,
 
-3. [TOO FAST – TOO FURIOUS: Faster Financial-Market Trading Agents Can Give Less Efficient Markets](https://www.researchgate.net/profile/John_Cartlidge/publication/273060607_Too_fast_too_furious_Faster_financial_market_trading_agents_can_give_less_efficient_markets/links/55882dfa08aeb29944448104.pdf)
+
 
 
 X has been found to oppose the anti-inflammatory actions of Y on Z (Alourfi, 2004).
 
 4. [Exhaustive Testing of Trader-agents in Realistically Dynamic Continuous Double Auction Markets: AA Does Not Dominate](local)
 
+
+
+
+1. [R. Das, J. E. Hanson, J. O. Kephart, and G. Tesauro. Agent-human interactions in the continuous double auction. The Proceedings of the International Joint Conferences on Artificial Intelligence (IJCAI), Seattle, USA (August, 2001), 2001.](https://s3.amazonaws.com/academia.edu.documents/44417575/das.pdf?AWSAccessKeyId=AKIAIWOWYYGZ2Y53UL3A&Expires=1556512970&Signature=JT7dTpWP0YqQRQx1avBwaZBS3uk%3D&response-content-disposition=inline%3B%20filename%3DAgent-Human_Interactions_in_the_Continuo.pdf)
+
+2. [TOO FAST – TOO FURIOUS: Faster Financial-Market Trading Agents Can Give Less Efficient Markets](https://www.researchgate.net/profile/John_Cartlidge/publication/273060607_Too_fast_too_furious_Faster_financial_market_trading_agents_can_give_less_efficient_markets/links/55882dfa08aeb29944448104.pdf)
