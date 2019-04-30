@@ -81,11 +81,9 @@ In this study, the experiment model will be based on Turquoise Plato™ venue in
 
 ### Literature Review of Multiple Markets Trading
 
-In addition, there is a relatively small body of literature that is concerned with if/how known adaptive automated trading strategies select optimal trade in multi-venue environments. ?
+In addition, there is a relatively small body of literature that is concerned with if/how AA and ZIP strategies select optimal trade in multi-venue environments. While P. Anthony and N. R. Jennings [developed](3) a framework to investigate if an autonomous agent can successfully bid across multiple auctions. They employed genetic algorithms (GAs), aim to determine what strategies are appropriate and effective in the markets. They defined four environments for experiments. The first one is where there are a short bidding time and a small number of active auctions. The second environment is where there is a short bidding time but a large number of active auctions. The third environment is where the relatively long bidding time and a small number of active auctions. The last environment is where there is a long bidding time with many active auctions. The results of these experiments presented that GAs can be used to successfully evolve bidding strategies for different auction contexts. The argument from analogy, I assume adaptive automated trading strategies, AA and ZIP, can operate well in multi-venue environments.
 
 ## Proposed Approach/Methodology/Research Questions
-
-IN PROCESSING
 
 - Simulation of multi-venue
 

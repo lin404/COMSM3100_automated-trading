@@ -25,6 +25,10 @@ Back in the 1980s, program trading was used on the New York Stock Exchange, with
 
 ### The impact of algorithmic trading on markets / interaction
 
+
 There is a large volume of published studies describing the role of algorithmic trading in electronic financial markets. A large and growing body of literature has investigated the impact of algorithmic trading on the financial markets. The relative literatures have highlighted that algorithmic trading may affect liquidity and volatility of the market.
 
 Many changes in the equity markets and their trading processes have occurred. The most obvious change is that trading has become incredibly fast (High-Frequency Trading). A Lit or light pool market will allow traders to see the amount of liquidity that is posted on the bid and offer of the order book for security. However, HFT became so pervasive that it grew increasingly difficult to execute large trades through a single exchange. Because large HFT orders had to be spread among multiple exchanges, it alerted trading competitors who could then get in front of the order and snatch up the inventory, driving up share prices. All of this occurred within milliseconds of the initial order being placed. To avoid the transparency of public exchanges and ensure liquidity for large block trades, several of the investment banks established private exchanges, which came to be known as dark pools.
+
+
+Due to the proliferation of online auctions, there is an increasing need to monitor and bid in multiple auctions in order to procure the best deal for the desired good.

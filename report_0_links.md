@@ -82,6 +82,8 @@
 (https://www.researchgate.net/profile/John_Cartlidge/publication/273060607_Too_fast_too_furious_Faster_financial_market_trading_agents_can_give_less_efficient_markets/links/55882dfa08aeb29944448104.pdf)
 
 
+## Bristol MSc report
+
 [Improving the Strategies of Algorithmic Traders and Investigating Further Realism in their Market Environment](http://carlhenrik.com/COMSM0111/bin/dissertations/ss8164.pdf)
 
 
