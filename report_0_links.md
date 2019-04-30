@@ -58,6 +58,8 @@
 [ZIP60: an enhanced variant of the ZIP trading algorithm](https://ieeexplore-ieee-org.bris.idm.oclc.org/document/1640270)
 [ZIP60: Further Explorations in the Evolutionary Design of Trader Agents and Online Auction-Market Mechanisms](https://ieeexplore-ieee-org.bris.idm.oclc.org/abstract/document/4769010)
 
+[Intelligent trading architecture](https://onlinelibrary-wiley-com.bris.idm.oclc.org/doi/full/10.1002/cpe.3690)
+
 # USING
 [Evaluation of the “Adaptive-Aggressive” Trading-AgentStrategy Against Human Traders in CDA: AA Wins](https://www.researchgate.net/profile/Dave_Cliff/publication/267767159_Evaluation_of_the_Adaptive-Aggressive_Trading-Agent_Strategy_Against_Human_Traders_in_CDA_AA_Wins/links/54b791d40cf2bd04be33a4e5.pdf)
 
