@@ -122,3 +122,7 @@ In addition, there is a relatively small body of literature that is concerned wi
 9. [A study of dark pool trading using an agent-based model](https://ieeexplore-ieee-org.bris.idm.oclc.org/document/6611692/references#references)
 10. [Evolving Bidding Strategies for Multiple Auctions](http://www.frontiersinai.com/ecai/ecai2002/pdf/p0178.pdf)
 11. [H. Zhu, "Do Dark Pools Harm Price Discovery?," Available at SSRN 1712173, 2012.]()
+12. [Rise of the Machines: Algorithmic Trading in the Foreign Exchange Market](https://onlinelibrary-wiley-com.bris.idm.oclc.org/doi/full/10.1111/jofi.12186)
+13. [Does Algorithmic Trading Improve Liquidity?](https://onlinelibrary-wiley-com.bris.idm.oclc.org/doi/full/10.1111/j.1540-6261.2010.01624.x)
+14. [Algorithmic Trading and the Market for Liquidity](https://www-cambridge-org.bris.idm.oclc.org/core/services/aop-cambridge-core/content/view/C1A34D3767436529EA4F23DB1780273C/S0022109013000471a.pdf/algorithmic_trading_and_the_market_for_liquidity.pdf)
+15. [Assessing the Impact of Algorithmic Trading on Markets: A Simulation Approach](https://pdfs.semanticscholar.org/820f/a261b451f5b57decf4f8ccf526247fcbc2ff.pdf)
