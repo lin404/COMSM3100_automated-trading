@@ -45,9 +45,15 @@ Till 1998 U.S Securities and Exchange Commission (SEC) authorized electronic exc
 
 On May 6th 2010, a world-scale stock market crash sweep Wall Street is known as Flash Crash. HFT firms were blamed for the crash. However, it couldn't stop the growth of HFT. The share of HFT increased to 70% of total US equity trading by 2012. Along with markets moved to become fully electronic, various evolved markets are created. In Feb 2014, the HFT tool provider started accepting bitcoin for its services.
 
-### The impact of algorithmic trading on markets / interaction
+### The impact of algorithmic trading on markets
 
-IN PROCESSING
+During the past decade, as a result of the computerisation of orders, the world has gradually been moving towards electronic trading. There is a large volume of published studies describing the role of algorithmic trading in electronic financial markets. A large and growing body of [literature](12,13,14,15) has investigated the impact of algorithmic trading on the financial markets. The relative [literature](13,14) has highlighted that algorithmic trading may affect the liquidity and volatility of the market.
+
+Many changes in the equity markets and their trading processes have occurred. The most obvious change is that trading has become incredibly fast (High-Frequency Trading). A Lit or light pool market will allow traders to see the amount of liquidity that is posted on the bid and offer of the order book for security. However, HFT became so pervasive that it grew increasingly difficult to execute large trades through a single exchange. Because large HFT orders had to be spread among multiple exchanges, it alerted trading competitors who could then get in front of the order and snatch up the inventory, driving up share prices. All of this occurred within milliseconds of the initial order being placed. To avoid the transparency of public exchanges and ensure liquidity for large block trades, several of the investment banks established private exchanges, which came to be known as dark pools. Dark pools are a type of platform that allows the trading of large blocks of shares without revealing quantities or prices publicly (to other traders) until after trades are completed. (it's not my words)
+
+On the other hands, some exchanges are made for better performance of HFT, such as Ultrahigh-frequency trading. Ultrahigh-frequency trading offers powerful computers to help to buy and to sell off stocks at extremely fast speeds. Algorithms run in Ultrahigh-frequency trading can scan dozens of markets at once, execute thousands of orders a second, and alter strategies in a matter of milliseconds. It's an extremely fitting environment for HFT, however, in return, 73% of all equity trading volume is required.
+
+As well as Exchange traded funds and so on, the innovation of markets is influencing the future of algorithmic trading systems. It's hard not to say algorithmic trading and markets having an effect on each other. There are more and more strategies and algorithms employed by high-frequency traders to make money. Searching for the best strategy is becoming a significant subject. Due to the proliferation of the types of markets, there is an increasing need to monitor and bid in multiple venues in order to procure the best deal for the desired good.
 
 ## Literature Review/Technical Background/Competitor Analysis
 
