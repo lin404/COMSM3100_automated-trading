@@ -37,7 +37,13 @@ The simulation trading venues may be used to explore other automated trading alg
 
 ### The brief history of algo trading and electronic markets
 
-IN PROCESSING
+What is algorithmic trading? Automated trading systems usually refer to computer programs that create orders and automatically submit trades to an exchange. In general, these systems are deployed for highly liquid markets known as high-frequency trading (HFT).
+
+Back in the 1602s, Amsterdam Stock Exchange, world's first stock market, formally begun trading in securities. In the 17th century, telegraph cables and a fleet of carrier pigeons were used to run a news delivery system. An associated anecdote is known that Nathan Mayer Rothschild knowing about the victory at the battle of Waterloo before the government of London did. In 1983, Bloomberg released the world's first computerized system to provide real-time price feed to Wall Street firms.
+
+Till 1998 U.S Securities and Exchange Commission (SEC) authorized electronic exchanges to open the door for computerized High-Frequency Trading. HFT was able to execute trades 1000 times faster than humans. And since that time high-frequency trading (HFT) has been used all over the world. HFT share rises rapidly from 35% in 2005 to 56% in 2010.
+
+On May 6th 2010, a world-scale stock market crash sweep Wall Street is known as Flash Crash. HFT firms were blamed for the crash. However, it couldn't stop the growth of HFT. The share of HFT increased to 70% of total US equity trading by 2012. Along with markets moved to become fully electronic, various evolved markets are created. In Feb 2014, the HFT tool provider started accepting bitcoin for its services.
 
 ### The impact of algorithmic trading on markets / interaction
 
@@ -81,7 +87,7 @@ In this study, the experiment model will be based on Turquoise Plato™ venue in
 
 ### Literature Review of Multiple Markets Trading
 
-In addition, there is a relatively small body of literature that is concerned with if/how AA and ZIP strategies select optimal trade in multi-venue environments. While P. Anthony and N. R. Jennings [developed](3) a framework to investigate if an autonomous agent can successfully bid across multiple auctions. They employed genetic algorithms (GAs), aim to determine what strategies are appropriate and effective in the markets. They defined four environments for experiments. The first one is where there are a short bidding time and a small number of active auctions. The second environment is where there is a short bidding time but a large number of active auctions. The third environment is where the relatively long bidding time and a small number of active auctions. The last environment is where there is a long bidding time with many active auctions. The results of these experiments presented that GAs can be used to successfully evolve bidding strategies for different auction contexts. The argument from analogy, I assume adaptive automated trading strategies, AA and ZIP, can operate well in multi-venue environments.
+In addition, there is a relatively small body of literature that is concerned with if/how AA and ZIP strategies select optimal trade in multi-venue environments. While P. Anthony and N. R. Jennings [developed](10) a framework to investigate if an autonomous agent can successfully bid across multiple auctions. They employed genetic algorithms (GAs), aim to determine what strategies are appropriate and effective in the markets. They defined four environments for experiments. The first one is where there are a short bidding time and a small number of active auctions. The second environment is where there is a short bidding time but a large number of active auctions. The third environment is where the relatively long bidding time and a small number of active auctions. The last environment is where there is a long bidding time with many active auctions. The results of these experiments presented that GAs can be used to successfully evolve bidding strategies for different auction contexts. The argument from analogy, I assume adaptive automated trading strategies, AA and ZIP, can operate well in multi-venue environments.
 
 ## Proposed Approach/Methodology/Research Questions
 
@@ -108,5 +114,5 @@ In addition, there is a relatively small body of literature that is concerned wi
 7. [Exhaustive Testing of Trader-agents in Realistically Dynamic Continuous Double Auction Markets: AA Does Not Dominate](local)
 8. [An Open-Source Limit-Order-Book Exchange for Teaching and Research](https://ieeexplore-ieee-org.bris.idm.oclc.org/abstract/document/8628760)
 9. [A study of dark pool trading using an agent-based model](https://ieeexplore-ieee-org.bris.idm.oclc.org/document/6611692/references#references)
-10. [Limit order placement across multiple exchanges](https://ieeexplore-ieee-org.bris.idm.oclc.org/document/6327772) ??
+10. [Evolving Bidding Strategies for Multiple Auctions](http://www.frontiersinai.com/ecai/ecai2002/pdf/p0178.pdf)
 11. [H. Zhu, "Do Dark Pools Harm Price Discovery?," Available at SSRN 1712173, 2012.]()
