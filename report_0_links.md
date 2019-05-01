@@ -3,6 +3,11 @@
 
 [EXPLORING ASSIGNMENT-ADAPTIVE (ASAD) TRADING AGENTS IN FINANCIAL MARKET EXPERIMENTS](http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.300.3633&rep=rep1&type=pdf)
 
+## Dark pool
+
+[Navigating the dark pool landscape](https://autobahn.db.com/microSite/docs/Navigating_Dark_Pool_Landscape.pdf)
+
+
 ## Strategies
 [Behavior based learning in identifying High Frequency Trading strategies](https://ieeexplore.ieee.org/abstract/document/6327783)
 [Research on stock trading strategy based on deep neural network](https://ieeexplore.ieee.org/document/8571531)
@@ -15,6 +20,11 @@
 
 ## ZIP && AA
 [Strategic bidding in continuous double auctions](https://www.sciencedirect.com/science/article/pii/S0004370208000787)
+
+
+## books
+[Dark Pools - The rise of AI trading machines and the looming threat to Wall Street]()
+[Dark Pools - The structure and Future of Off-exchange Trading and Liquidity]()
 
 ## markets & algorithmic trading
 [Algorithmic Trading](https://ieeexplore-ieee-org.bris.idm.oclc.org/document/5696713)
