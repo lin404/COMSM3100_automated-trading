@@ -93,7 +93,7 @@ Much of the current literature on algorithmic trading systems have begun to pay 
 
 Once again, the former example of research (D.Cliff ICAART2019) validates that an experiment environment closer to real-world financial markets is significantly important as the study of automated trading algorithms is mainly based on observational knowledge. For this study, BSE will be employed to simulate a LOB-based financial market.
 
-BSE is an open source software developed and extended by D. Cliff since 2012. In 2018, [BSE](1) is released as a public-domain platform for teaching and research. Due to Cliff's description in the report, BSE LOB can handle a variety of types of order with different priority, including market orders (MKT), limit orders (LIM), good-for-day (GFD), fill-or-kill (FOK), all-or-nothing (AON), immediate-or-cancel (IOC), Iceberg orders (ICE), and so on. As utilized in research (D.Cliff ICAART2019), being able to set more nature supply and demand schedules is a significant characteristic of BSE. In addition to that, a very important feature for this study is that multiple trading venues can be built using BSE as orders can be dealt between two or more trading venues.
+BSE is an open source software developed and extended by D. Cliff since 2012. In 2018, [BSE](8) is released as a public-domain platform for teaching and research. Due to Cliff's description in the report, BSE LOB can handle a variety of types of order with different priority, including market orders (MKT), limit orders (LIM), good-for-day (GFD), fill-or-kill (FOK), all-or-nothing (AON), immediate-or-cancel (IOC), Iceberg orders (ICE), and so on. As utilized in research (D.Cliff ICAART2019), being able to set more nature supply and demand schedules is a significant characteristic of BSE. In addition to that, a very important feature for this study is that multiple trading venues can be built using BSE as orders can be dealt between two or more trading venues.
 
 ### Literature Review of Block Trading
 
@@ -148,3 +148,40 @@ The aim of these experiments is to determine which strategy is more effective in
 13. [Does Algorithmic Trading Improve Liquidity?](https://onlinelibrary-wiley-com.bris.idm.oclc.org/doi/full/10.1111/j.1540-6261.2010.01624.x)
 14. [Algorithmic Trading and the Market for Liquidity](https://www-cambridge-org.bris.idm.oclc.org/core/services/aop-cambridge-core/content/view/C1A34D3767436529EA4F23DB1780273C/S0022109013000471a.pdf/algorithmic_trading_and_the_market_for_liquidity.pdf)
 15. [Assessing the Impact of Algorithmic Trading on Markets: A Simulation Approach](https://pdfs.semanticscholar.org/820f/a261b451f5b57decf4f8ccf526247fcbc2ff.pdf)
+
+
+## Gannt Chart of Project Plan
+
+Overall, task1 to task3 are design Phase, task4 is developing and test Phase, task5 and task6 are analysis phase. The draft will be written down to go through the whole phase.
+
+Task1: the investigation of electronic trading markets
+Description: Research and collect information about the electronic trading markets: Turquoise Lit and Turquoise Plato. To a better understanding, the pre-investigation of general electronic trading markets is considerable. Given that the design of the dark pool is more complex than the lit pool, 2 days are allocated for the study of Turquoise Plato.
+Milestone: Milestone is reached when the design of markets is completed.
+Deliverable: Write up the design of the markets which will be simulated. Get the review and feedback of the design.
+
+Task2: the investigation of automated trading strategies
+Description: Research and collect information about automated trading strategies: Adaptive Aggressive (AA) or Zero-Intelligence Plus (ZIP). The study of automated trading strategies is divided into theory and practice.
+Milestone: Milestone is reached when the design of the algorithm of automated trading strategies is completed.
+Deliverable: Write up the theory based algorithms of AA and ZIP. Get the review and feedback of algorithms design.
+
+Task3: the investigation of the simulator
+Description: Research and collect information about the simulator: Bristol Stock Exchange (BSE). The investigation of BSE is divided into the simulation of venues and agents. Three different agents will be built to compete in the market, one more day is allocated for the study of the simulation of agents than the simulation of venues.
+Milestone: Milestone is reached when the development framework of BSE is completed.
+Deliverable: Install the source code of BSE. Write up how to implement the BSE. Write up how to simulate the venues using BSE. Write up how to build the agents using BSE. Get the review and feedback of the draft.
+
+Task4: experiment setups
+Description: Build and test experiment environments and agents. The experiment environment and agents will be built based on the design. Given the rest performance comparison and analysis is based on experiments, 26 days are allocated for developing and testing the experiment environments and agents.
+Milestones: Milestone is reached when the experiment environments and agents are completed.
+Deliverable: Build a lit pool venue and an independent dark pool venue. Build a venue combines two venues with different mechanisms. Build three robot agents using AA, ZIP and SHVR strategies respectively. Repeat test and modification, aiming to guarantee the quality of the experiment.
+
+Task5: performance comparison/analysis of the automated trading agents
+Description: Collect and analyze the data of the experiments. Assume there is no more code modification, 9 days in total are allocated to investigate the results of experiments.
+Milestones: Milestone is reached when the experiments and analysis of results are completed.
+Deliverable: Different scenarios will be designed and executed. The combination will be AA vs. ZIP, ZIP vs. SHVR, AA vs. SHVE and AA vs. ZIP vs. SHVE. Each experiment will use different trader-strategy ratios and supply and demand schedules. Each experiment will be recorded and evaluated.
+
+Task6: final write-ups
+Description: Summarize and modify the draft of the research process. Given that it's the research over two months, 10 days are allocated for writing up the thesis.
+Milestones: Milestone is reached when the thesis is completed.
+Deliverable: Write up the thesis based on the draft. Repeat review and edition, attempt to improve the quality of the thesis.
+
+## Risk Analysis
