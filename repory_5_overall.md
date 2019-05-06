@@ -152,7 +152,7 @@ The aim of these experiments is to determine which strategy is more effective in
 
 ## Gannt Chart of Project Plan
 
-Overall, task1 to task3 are design Phase, task4 is developing and test Phase, task5 and task6 are analysis phase. The draft will be written down to go through the whole phase.
+The overview of the figure1, task1 to task3 are design Phase, task4 is developing and test Phase, task5 and task6 are analysis phase. The draft will be written down to go through the whole phase.
 
 Task1: the investigation of electronic trading markets
 Description: Research and collect information about the electronic trading markets: Turquoise Lit and Turquoise Plato. To a better understanding, the pre-investigation of general electronic trading markets is considerable. Given that the design of the dark pool is more complex than the lit pool, 2 days are allocated for the study of Turquoise Plato.
@@ -177,7 +177,7 @@ Deliverable: Build a lit pool venue and an independent dark pool venue. Build a 
 Task5: performance comparison/analysis of the automated trading agents
 Description: Collect and analyze the data of the experiments. Assume there is no more code modification, 9 days in total are allocated to investigate the results of experiments.
 Milestones: Milestone is reached when the experiments and analysis of results are completed.
-Deliverable: Different scenarios will be designed and executed. The combination will be AA vs. ZIP, ZIP vs. SHVR, AA vs. SHVE and AA vs. ZIP vs. SHVE. Each experiment will use different trader-strategy ratios and supply and demand schedules. Each experiment will be recorded and evaluated.
+Deliverable: Different scenarios will be designed and executed: the performance when AA and ZIP are applied in a single venue, the performance when AA and ZIP are applied in multiple venues. The combination will be AA vs. ZIP, ZIP vs. SHVR, AA vs. SHVE and AA vs. ZIP vs. SHVE. Each experiment will use different trader-strategy ratios and supply and demand schedules. Each experiment will be recorded and evaluated. Compare the performance when AA and ZIP are implemented in different situations.
 
 Task6: final write-ups
 Description: Summarize and modify the draft of the research process. Given that it's the research over two months, 10 days are allocated for writing up the thesis.
@@ -185,3 +185,85 @@ Milestones: Milestone is reached when the thesis is completed.
 Deliverable: Write up the thesis based on the draft. Repeat review and edition, attempt to improve the quality of the thesis.
 
 ## Risk Analysis
+
+There are a number of risks that could affect the progress of the project. The likelihood rating is on a scale 1-5 where each point p represents a p/5 probability of incidence. In the same way, severity indicates the p/5 possibility of the risk having implications for the project.
+
+### Risk1
+
+Misunderstand the mechanism used in Turquoise Plato.
+
+likelihood: 2
+severity: 3
+Notes and Contingency: Keep in mind of review is important. If it occurs in the design phase, there is 1 buffer day to recover. If the mistake is realized in develop or test phase, there are 3 days to recover. If the recovery takes more time than expected, simulate a general dark pool instead of Turquoise Plato. The experiment environment may be not close to the real-world market, but the important scenario of environment that agents perform in multiple venues can be implemented as planned.
+
+### Risk2
+
+Misunderstand the theory of ZIP.
+
+likelihood: 1
+severity: 3
+Notes and Contingency: The review in the design phase is important. If it occurs in the design phase, there is 1 buffer day to recover. If the mistake is realized in develop or test phase, there are 3 days to recover. Utilise the available source code provided by BSE.
+
+### Risk3
+
+Misunderstand the theory of AA.
+
+likelihood: 2
+severity: 3
+Notes and Contingency: This would happen since the source code of AA doesn't provide publicly. The review in the design phase is important. If it occurs in the design phase, there is 1 buffer day to recover. If the mistake is realized in develop or test phase, there are 3 days to recover. Utilise the available source code provided by BSE.
+
+### Risk4
+
+The research about ZIP and AA takes more time than expected.
+
+likelihood: 1
+severity: 2
+Notes and Contingency: Thanks to the large volume of the lecture, this should not happen. There is 1 day to recover in case it happened.
+
+### Risk5
+
+Setting up the development environment takes more time than expected.
+
+likelihood: 1
+severity: 2
+Notes and Contingency: This may not happen since it's as open-source and has been used to exam the performance of AA and ZIP. If it happens, ask for experts.
+
+### Risk6
+
+The simulator does not provide a specific feature to simulate the markets designed.
+
+likelihood: 1
+severity: 4
+Notes and Contingency: Research and investigate OpEx or ExOp replace BSE. If neither OpEx nor ExOp has no specific feature to simulate. Change the design of markets. I would be the worst case.
+
+### Risk7
+
+Development of the experiment environment takes more time than expected.
+
+likelihood: 2
+severity: 1
+Notes and Contingency: It is a usual case happens during a project. There are 3 days as a buffer if the schedule is delayed. Fully utilise the available source code provided by BSE. Discuss with experts of BSE.
+
+### Risk8
+
+The scenarios of the experiment are not enough.
+
+likelihood: 3
+severity: 4
+Notes and Contingency: This issue would affect the quantity of the experiments. Implement experiments by learning from the previous researches. Classify the experiments to cover different cases.
+
+### Risk9
+
+The results of the experiment are different from expected.
+
+likelihood: 3
+severity: 2
+Notes and Contingency: This means either the experiment environment is wrong or unexpected results occurs. More experiments in the different scenarios with varying parameters, more deliberately analysis are considerable. Record and classify the results is required.
+
+### Risk10
+
+Writing up thesis takes more time than expected.
+
+likelihood: 3
+severity: 4
+Notes and Contingency: This may happen when the edit delayed or the feedback is too bad. Tracking the progress of the project and keeping writing up the draft day by day is required.
