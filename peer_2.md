@@ -6,11 +6,11 @@ The objective of the project is to identify and analyse current algorithmic trad
 
 ## How is the student going to approach the project and how will the student know if the project met its goals? (100-250 words)
 
-To better understand financial exchanges, limit orders will be studied. Bristol Stock Exchange (BSE) will be used to simulate the trading venue. Dark pools will be mainly studied, aiming to better understand the trading market. A simplified version of Turquoise Plato majority owned by the London Stock Exchange (LSE) will be the model of the test environment. As the competitors among the many different algorithmic trading strategies, ZIP, AA and GDX will be investigated and extended in the project. 
+To better understand financial exchanges, limit orders will be studied. Bristol Stock Exchange (BSE) will be used to simulate the trading venue. Dark pools will be mainly studied, aiming to better understand the trading market. A simplified version of Turquoise Plato majority owned by the London Stock Exchange (LSE) will be the model of the test environment. As the competitors among the many different algorithmic trading strategies, ZIP, AA and GDX will be investigated and extended in the project. ZIP will be first improved to increase the gain. The same environment will be used to evaluate performance. The results of original ZIP and modified ZIP against AA and GDX will be recorded. From the comparison of the results, the project meets its goals if modified ZIP gains more profits.
 
 ## How does the student plan to achieve the deliverables and mitigate risks, and is this planning approach appropriate? (100-250 words)
 
-
+In the first week, the simulator BSE will be set up on the local environment. Then GDX agents will be developed in BSE. In the fourth week, AA, ZIP and GDX will be investigated in the first place. The next two weeks will be used to build and test a dark pools trading venue in BSE. For each algorithmic trading strategies, ZIP, AA and GDX, one and half weeks will be used to improve it and investigate the modified algorithm. The last about 2 weeks will be used to write up the thesis. There are three risks have been considered in the thesis. Enough research and time to study and understand how BSE works will mitigate the risks of developing the algorithms and test environment. Plus, the help and guidance from the expert will mitigate risks as well. Unable to improve algorithms would be the biggest risk. It will be minimised by many studies and reasonable time planning.
 
 ## How well was the research proposal presented and formatted? (100-250 words)
 
