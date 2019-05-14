@@ -2,7 +2,7 @@
 
 ## What is the project trying to achieve, why that is important and how is it different from previous work? (100-250 words)
 
-The objective of the project is to identify and analyse current algorithmic trading strategies, and extend these strategies to increase their profitability in dark pools. Over the last decade, along with an increased number of dark pools are created, more and more investors orders are being traded in dark pools. Therefore, there are critical demands of developing algorithmic trading strategies to benefit from dark pools. A considerable amount of literature has evaluated the current published main adaptive trading algorithms, such as ZIP, GDX and AA. However, none of the previous works has investigated whether those trading algorithms can profit from dark pools, whereas this project will focus on the performance evaluation of ZIP, GDX and AA trading in both dark pools and light pools.
+The objectives of the project are to identify and analyse current algorithmic trading strategies, and extend these strategies to increase their profitability in dark pools. Over the last decade, along with an increased number of dark pools are created, more and more investors orders are being traded in dark pools. Therefore, there are critical demands of developing algorithmic trading strategies to benefit from dark pools. A considerable amount of literature has evaluated the current published main adaptive trading algorithms, such as ZIP, GDX and AA. However, none of the previous works has investigated whether those trading algorithms can profit from dark pools, whereas this project will focus on the performance evaluation of ZIP, GDX and AA trading in both dark pools and light pools.
 
 ## How is the student going to approach the project and how will the student know if the project met its goals? (100-250 words)
 
@@ -22,5 +22,5 @@ Seems there is some misunderstanding between the light pools and limit orders, m
 
 ## Give a mark out of 100 using the modified thesis project marking scheme and justify the mark given (50-250 words)
 
-60/100
+I give 63/100.
 Good knowledge and understanding of a specific financial market - dark pools. Wide reading about algorithmic trading strategies including ZIP, GDX and AA. The report is well organised with clear directions. However, there are some errors due to the lack of financial knowledge. For instance, Limit Order Book (LOB) is a kind of trade order, not a type of trading market, the expression of 'operating in both the LOB and dark pools' is not appropriate.
