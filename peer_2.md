@@ -18,9 +18,9 @@ The structure of the research proposal is well organized. The proposal started w
 
 ## What should be improved before the student embarks on their project? (50-250 words, can use bullet points)
 
-Seems there is some misunderstanding between the light pools and limit orders, more research of light pools is needed. There is no much information about what kind of trading venues are used in previous works. Therefore, more details about expereiment environment used in previous works would better distinguish the contributions of this project from others. Risk analysis can be extended in further work. For example, how to evaluate the quantity of experiment, what if the tests are not enough.
+Seems there is some misunderstanding between the light pools and limit orders, more research of light pools is needed. There is no much information about what kind of trading venues are used in previous works. Therefore, more details about the experiment environment used in previous works would better distinguish the contributions of this project from others. Risk analysis can be extended in further work. For example, how to evaluate the quantity of experiment, what if the tests are not enough.
 
 ## Give a mark out of 100 using the modified thesis project marking scheme and justify the mark given (50-250 words)
 
 60/100
-Good knowledge and understanding of a specific financial market - dark pools. Wide reading about algorithmic trading strategies including ZIP, GDX and AA. The report is well organised with clear directions. Howevere, there are some errors due to lack of financial knowledge. For instance, Limit Order Book (LOB) is a kind of trade order, not a type of trading market, the expression of 'operating in both the LOB and dark pools' is not appropriate.
+Good knowledge and understanding of a specific financial market - dark pools. Wide reading about algorithmic trading strategies including ZIP, GDX and AA. The report is well organised with clear directions. However, there are some errors due to the lack of financial knowledge. For instance, Limit Order Book (LOB) is a kind of trade order, not a type of trading market, the expression of 'operating in both the LOB and dark pools' is not appropriate.
