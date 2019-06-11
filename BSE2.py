@@ -145,7 +145,7 @@ class Orderbook_half:
                                 self.lob_anon.append([price, qty])
                 else:
                         sys.exit('Fail: Orderbook_half __init__ passed booktype=%s', str(booktype))
-                if verbose: print self.lob_anon
+                if verbose: print (self.lob_anon)
 
 
         def build_lob(self, verbose):
@@ -193,7 +193,7 @@ class Orderbook_half:
                                 qty = lob[price][0]
                                 self.lob_anon.append([price, qty])
 
-                if verbose: print self.lob_anon
+                if verbose: print (self.lob_anon)
 
                 # record best price and associated trader-id
                 if len(self.lob) > 0 :
@@ -204,7 +204,7 @@ class Orderbook_half:
                 else :
                         self.best_price = None
 
-                if verbose: print self.lob
+                if verbose: print (self.lob)
 
 
         def book_add(self, order, verbose):
@@ -248,7 +248,7 @@ class Orderbook_half:
 
                         return {"TraderMsgs":[tmsg], "TapeEvents":tape_events}
                 else:
-                        print 'NOP' # no operation -- order ID not in the order dictionary
+                        print ('NOP') # no operation -- order ID not in the order dictionary
                         sys.exit('Fail: book_CAN() attempts to delete nonexistent order ')
 
 
@@ -872,7 +872,7 @@ class Exchange(Orderbook):
                 ostyle = order.ostyle
 
                 ack_response = Exch_msg(trader_id, order.orderid, 'ACK', [[order.price, order.qty]],  None, 0, 0)
-                if verbose: print ack_response
+                if verbose: print (ack_response)
 
 
                 # which pool does it get sent to: Lit or Dark?
