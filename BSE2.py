@@ -53,6 +53,7 @@ from datetime import datetime
 
 from BSE2_msg_classes import Assignment, Order, Exch_msg
 from BSE_trader_agents import Trader_ISHV
+from BSE_trader_agents import Trader_ZIP
 
 # from BSE2_unittests import test_all
 # from BSE2_dev import proc_OXO proc_ICE
@@ -1557,7 +1558,7 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, sum
                 if time > (triggertime - 3*timestep)  and ((time+3*timestep) % replenish_period) <= (2 * timestep):
                         # sys.exit('Bailing at injection trigger, time = %f' % time)
 
-                        # here we inject big quantities nto both buyer and seller sides... hopefully the injected traders will do a deal
+                        # here we inject big quantities into both buyer and seller sides... hopefully the injected traders will do a deal
                         pending_cust_orders[highest_buyer_index-1].qty = big_qty
                         pending_cust_orders[highest_seller_index-1].qty = big_qty
 
@@ -1757,8 +1758,10 @@ if __name__ == "__main__":
 
     # buyers_spec = [('QSHV', 10), ('SHVR',2)]
 
-    buyers_spec = [('ISHV', 10)]
-    sellers_spec = buyers_spec
+    # buyers_spec = [('ISHV', 10)]
+    # sellers_spec = buyers_spec
+    buyers_spec = [('ZIP', 10)]
+    sellers_spec = [('ISHV', 10)]
     traders_spec = {'sellers':sellers_spec, 'buyers':buyers_spec}
 
     sys.stdout.flush()

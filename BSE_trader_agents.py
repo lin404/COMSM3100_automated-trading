@@ -1,4 +1,5 @@
-
+import sys
+import random
 from BSE2_msg_classes import Assignment, Order, Exch_msg
 
 
@@ -160,10 +161,10 @@ class Trader:
                                                   (transactionprice, limitprice, qty, profit, self.n_trades, age, self.balance))
 
                                 if profit < 0 :
-                                        print self.tid
-                                        print self.ttype
-                                        print profit
-                                        print exch_order
+                                        print (self.tid)
+                                        print (self.ttype)
+                                        print (profit)
+                                        print (exch_order)
                                         sys.exit('Exit: Negative profit')
 
                         if verbose: print('%s: profit=%d bal=%d profit/time=%f' %
@@ -423,10 +424,10 @@ class Trader_ZIP(Trader):
                 self.price = None
                 self.limit = None
                 # memory of best price & quantity of best bid and ask, on LOB on previous update
-                self.prev_best_bid_p = None
-                self.prev_best_bid_q = None
-                self.prev_best_ask_p = None
-                self.prev_best_ask_q = None
+                self.prev_best_bid_p = 0
+                self.prev_best_bid_q = 0
+                self.prev_best_ask_p = 0
+                self.prev_best_ask_q = 0
                 # memory of worst prices from customer orders received so far
                 self.worst_bidprice = None
                 self.worst_askprice = None
@@ -587,7 +588,7 @@ class Trader_ZIP(Trader):
                 if len(lob['bids']['lob']) > 0: lob_best_bid_p = lob['bids']['lob'][0][0]
                 else: lob_best_bid_p = None
 
-                lob_best_bid_q = None                   # default assumption
+                lob_best_bid_q = 0
 
                 if lob_best_bid_p != None:
                         # non-empty bid LOB
@@ -630,11 +631,11 @@ class Trader_ZIP(Trader):
                 if len(lob['asks']['lob']) > 0: lob_best_ask_p = lob['asks']['lob'][0][0]
                 else: lob_best_ask_p = None
 
-                lob_best_ask_q = None
+                lob_best_ask_q = 0
 
                 if lob_best_ask_p != None:
                         # non-empty ask LOB
-
+                        
                         if self.prev_best_ask_p < lob_best_ask_p: best_ask_p_increased = True
                         else: best_ask_p_increased = False
 
