@@ -705,7 +705,6 @@ class Orderbook(Orderbook_half):
 # Exchange's internal orderbooks
 class Exchange(Orderbook):
 
-
     def __init__(self, eid):
         self.eid = eid          # exchange ID string
         self.lit = Orderbook(eid + "Lit")  # traditional lit exchange
@@ -842,16 +841,16 @@ class Exchange(Orderbook):
     def dump_tape(self, session_id, dumpfile, tmode):
 
         print('Dumping tape s.tape=')
-        for ti in dumpfile:
-                print('%s' % ti)
+        for ti in self.tape:
+            print('%s' % ti)
 
-        for tapeitem in dumpfile:
-                print('tape_dump: tapitem=%s' % tapeitem)
-                if tapeitem['type'] == 'Trade':
-                        dumpfile.write('%s, %s, %s, %s, %s\n' % (session_id, tapeitem['pool_id'], tapeitem['time'], tapeitem['price'], str(tapeitem)))
+        for tapeitem in self.tape:
+            print('tape_dump: tapitem=%s' % tapeitem)
+            if tapeitem['type'] == 'Trade':
+                dumpfile.write('%s, %s, %s, %s, %s\n' % (session_id, tapeitem['pool_id'], tapeitem['time'], tapeitem['price'], str(tapeitem)))
 
         if tmode == 'wipe':
-                self.tape = []
+            self.tape = []
 
 
 
@@ -977,76 +976,76 @@ class Exchange(Orderbook):
         trader_msgs = None
         tape_events = None
 
-        if response != None:
-                # non-null response should be dictionary with two items: list of trader messages and list of tape events
-                if verbose: print('Response ---- ')
-                trader_msgs = response["TraderMsgs"]
-                tape_events = response["TapeEvents"]
+        if bool(response):
+            # non-null response should be dictionary with two items: list of trader messages and list of tape events
+            if verbose: print('Response ---- ')
+            trader_msgs = response["TraderMsgs"]
+            tape_events = response["TapeEvents"]
 
-                total_fees = 0
-                # trader messages include details of fees charged by exchange for processing this order
-                for msg in trader_msgs:
-                        if msg.tid == trader_id:
-                                total_fees += msg.fee
-                                if verbose: print('Trader %s adding fee %d from msg %s' % (trader_id, msg.fee, msg))
-                self.trader_recs[trader_id].balance += total_fees
-                if verbose: print('Trader %s Exch %s: updated balance=%d' % (trader_id, self.eid, self.trader_recs[trader_id].balance))
+            total_fees = 0
+            # trader messages include details of fees charged by exchange for processing this order
+            for msg in trader_msgs:
+                    if msg.tid == trader_id:
+                            total_fees += msg.fee
+                            if verbose: print('Trader %s adding fee %d from msg %s' % (trader_id, msg.fee, msg))
+            self.trader_recs[trader_id].balance += total_fees
+            if verbose: print('Trader %s Exch %s: updated balance=%d' % (trader_id, self.eid, self.trader_recs[trader_id].balance))
 
-                # record the tape events on the tape
-                if len(tape_events) > 0:
-                        for event in tape_events:
-                                self.tape_update(event, verbose)
+            # record the tape events on the tape
+            if len(tape_events) > 0:
+                    for event in tape_events:
+                            self.tape_update(event, verbose)
 
-                if verbose:
-                        print('<Exch.Proc.Order(): tape_events=%s' % tape_events)
-                        s = '<Exch.Proc.Order(): trader_msgs=['
-                        for msg in trader_msgs:
-                                s = s + '[' + str(msg) + '], '
-                        s = s + ']'
-                        print(s)
+            if verbose:
+                    print('<Exch.Proc.Order(): tape_events=%s' % tape_events)
+                    s = '<Exch.Proc.Order(): trader_msgs=['
+                    for msg in trader_msgs:
+                            s = s + '[' + str(msg) + '], '
+                    s = s + ']'
+                    print(s)
 
-                # by this point, tape has been updated
-                # so in principle only thing process_order hands back to calling level is messages for traders
+            # by this point, tape has been updated
+            # so in principle only thing process_order hands back to calling level is messages for traders
 
-                # but...
+            # but...
 
-                # for back-compatibility with this method in BSE1.x and with trader definitions (AA, ZIP, etc)
-                # we ALSO hand back a "transaction record" which summarises any actual transactions
-                # or is None if no transactions occurred. Structure was:
-                # transaction_record = {'type': 'Trade',
-                #                       'time': time,
-                #                       'price': price,
-                #                       'party1': counterparty,
-                #                       'party2': order.tid,
-                #                       'qty': order.qty
-                #                       }
-                # In BSE 1.x the maximum order-size was Qty=1, which kept things very simple
-                # In BSE 2.x, a single order of Qty>1 can result in multiple separate transactions,
-                # so we need to aggregate those into one order. Do this by computing total cost C of
-                # execution for quantity Q and then declaring that the price for each unit was C/Q
-                # As there may now be more then one counterparty to a single order, party1 & party2 returned as None
+            # for back-compatibility with this method in BSE1.x and with trader definitions (AA, ZIP, etc)
+            # we ALSO hand back a "transaction record" which summarises any actual transactions
+            # or is None if no transactions occurred. Structure was:
+            # transaction_record = {'type': 'Trade',
+            #                       'time': time,
+            #                       'price': price,
+            #                       'party1': counterparty,
+            #                       'party2': order.tid,
+            #                       'qty': order.qty
+            #                       }
+            # In BSE 1.x the maximum order-size was Qty=1, which kept things very simple
+            # In BSE 2.x, a single order of Qty>1 can result in multiple separate transactions,
+            # so we need to aggregate those into one order. Do this by computing total cost C of
+            # execution for quantity Q and then declaring that the price for each unit was C/Q
+            # As there may now be more then one counterparty to a single order, party1 & party2 returned as None
 
-                tape_summary = None
-                if len(tape_events) > 0:
-                        total_cost = 0
-                        total_qty = 0
-                        if verbose: print('tape_summary:')
-                        for event in tape_events:
-                                if event['type'] == 'Trade':
-                                        total_cost += event['price']
-                                        total_qty += event['qty']
-                                        if verbose: print('total_cost=%d; total_qty=%d' % (total_cost, total_qty))
-                        if total_qty > 0 :
-                                avg_cost = total_cost / total_qty
-                                if verbose: print('avg_cost=%d' % avg_cost)
-                                tape_summary = {'type': 'Trade',
-                                                'time': time,
-                                                'price': avg_cost,
-                                                'party1': None,
-                                                'party2': None,
-                                                'qty': total_qty}
+            tape_summary = None
+            if len(tape_events) > 0:
+                    total_cost = 0
+                    total_qty = 0
+                    if verbose: print('tape_summary:')
+                    for event in tape_events:
+                            if event['type'] == 'Trade':
+                                    total_cost += event['price']
+                                    total_qty += event['qty']
+                                    if verbose: print('total_cost=%d; total_qty=%d' % (total_cost, total_qty))
+                    if total_qty > 0 :
+                            avg_cost = total_cost / total_qty
+                            if verbose: print('avg_cost=%d' % avg_cost)
+                            tape_summary = {'type': 'Trade',
+                                            'time': time,
+                                            'price': avg_cost,
+                                            'party1': None,
+                                            'party2': None,
+                                            'qty': total_qty}
 
-                return {'tape_summary':tape_summary, 'trader_msgs':trader_msgs}
+            return {'tape_summary':tape_summary, 'trader_msgs':trader_msgs}
         else: return {'tape_summary':None, 'trader_msgs':None}
 
 
