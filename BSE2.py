@@ -222,7 +222,7 @@ class Orderbook_half:
         self.n_orders = len(self.orders)
         # reconstruct the LOB -- from scratch (inefficient)
         self.build_lob(verbose)
-        return {} #null response
+        return None #null response
 
 
     def book_CAN(self, time, order, pool_id, verbose):
@@ -549,6 +549,18 @@ class Orderbook(Orderbook_half):
                 mprice = ( (bid_p * ask_q) + (ask_p * bid_q) ) / tot_q
         return mprice
 
+    def add_lim_bi_order(self, order, verbose):
+        # add a BI order to the order book in Discovery
+        if verbose: print('>add_lim_order: order.orderid=%d' % (order.orderid))
+        if order.otype == 'Bid':
+                response=self.bids.book_add(order, verbose)
+                # best_price = self.bids.lob_anon[0][0]
+                # self.bids.best_price = best_price
+        else:
+                response=self.asks.book_add(order, verbose)
+                # best_price = self.asks.lob_anon[0][0]
+                # self.asks.best_price = best_price
+        return response
 
     def add_lim_order(self, order, verbose):
         # add a LIM order to the LOB and update records
@@ -705,7 +717,7 @@ class Orderbook(Orderbook_half):
 # Exchange's internal orderbooks
 class Exchange(Orderbook):
 
-    def __init__(self, eid):
+    def __init__(self, eid, discovery):
         self.eid = eid          # exchange ID string
         self.lit = Orderbook(eid + "Lit")  # traditional lit exchange
         self.drk = Orderbook(eid + "Drk")  # NB just a placeholder -- in this version of BSE the dark pool is undefined
@@ -714,6 +726,7 @@ class Exchange(Orderbook):
         self.order_id = 0       # unique ID code for each order received by the exchange, starts at zero
         self.open = False       # is the exchange open (for business) or closed?
 
+        self.discovery = discovery # discovery service
 
     def __str__(self):
         s = '\nExchID: %s ' % (self.eid)
@@ -781,7 +794,7 @@ class Exchange(Orderbook):
                 return responses
 
 
-        print('Exchange %s opening for business', self.eid)
+        # print('Exchange %s opening for business', self.eid)
         response_l = open_pool(time, self.lit, verbose)
         response_d = open_pool(time, self.drk, verbose)
 
@@ -813,7 +826,7 @@ class Exchange(Orderbook):
 
                 return responses
 
-        print('Exchange %s closing for business', self.eid)
+        # print('Exchange %s closing for business', self.eid)
         response_l = close_pool(time, self.lit, verbose)
         response_d = close_pool(time, self.drk, verbose)
 
@@ -840,7 +853,7 @@ class Exchange(Orderbook):
 
     def dump_tape(self, session_id, dumpfile, tmode):
 
-        print('Dumping tape s.tape=')
+        # print('Dumping tape s.tape=')
         for ti in self.tape:
             print('%s' % ti)
 
@@ -875,7 +888,7 @@ class Exchange(Orderbook):
                 if verbose: print('record= %s' % str(trader_rec))
 
         # what quantity qualifies as a block trade (route to DARK)?
-        block_size = 300
+        block_size = 200
 
         ostyle = order.ostyle
 
@@ -885,9 +898,32 @@ class Exchange(Orderbook):
 
         # which pool does it get sent to: Lit or Dark?
         if order.qty < block_size:
-                if verbose: print('Process_order: qty=%d routes to LIT pool' % order.qty)
-                pool = self.lit
+            if verbose: print('Process_order: qty=%d routes to LIT pool' % order.qty)
+            pool = self.lit
         else:
+
+            if order.subtype == 'BI':
+                if verbose: print(f'order={order.subtype} : qty={order.qty} routes to Discovery Service')
+                osrs = self.discovery.match_block_indication(order, verbose)
+
+                # No match found. Add order to orderbook
+                if len(osrs) == 0:
+                    self.discovery.add_lim_bi_order(order, verbose)
+                    return {'tape_summary':None, 'trader_msgs':None}
+                else:
+                    # TODO Return OSR?
+                    # TODO Get QBO
+                    # TODO Pass it to self.drk and update the reputation score
+                    pass
+
+            elif order.subtyoe == 'BDN':
+                # add eligible BDN order to discovery order book
+                self.discovery.add_lim_bi_order(order, verbose)
+
+                if verbose: print('Process_order: qty=%d routes to DARK pool' % order.qty)
+                pool = self.drk
+
+            else:
                 if verbose: print('Process_order: qty=%d routes to DARK pool' % order.qty)
                 pool = self.drk
 
@@ -895,77 +931,77 @@ class Exchange(Orderbook):
         # Cancellations don't generate new order-ids
 
         if ostyle == 'CAN':
-                # deleting a single existing order
-                # NB this trusts the order.qty -- sends CANcel only to the pool that the QTY indicates
-                response = pool.process_order_CAN(time, order, verbose)
+            # deleting a single existing order
+            # NB this trusts the order.qty -- sends CANcel only to the pool that the QTY indicates
+            response = pool.process_order_CAN(time, order, verbose)
 
         elif ostyle == 'XXX':
-                # delete all orders from the trader that issued the XXX order
-                # need to sweep through both pools
-                response_l = self.lit.process_order_XXX(time, order, verbose)
-                response_d = self.drk.process_order_XXX(time, order, verbose)
-                # the response from either lit and/or dark might be a string of responses from multiple individual CAN orders
-                # here we just glue those together for later processing
-                self.consolidate_responses([response_l, response_d])
+            # delete all orders from the trader that issued the XXX order
+            # need to sweep through both pools
+            response_l = self.lit.process_order_XXX(time, order, verbose)
+            response_d = self.drk.process_order_XXX(time, order, verbose)
+            # the response from either lit and/or dark might be a string of responses from multiple individual CAN orders
+            # here we just glue those together for later processing
+            self.consolidate_responses([response_l, response_d])
 
         else:
-                # give each new order a unique ID
-                order.orderid = self.order_id
-                self.order_id = order.orderid + 1
+            # give each new order a unique ID
+            order.orderid = self.order_id
+            self.order_id = order.orderid + 1
 
-                ack_msg = Exch_msg(trader_id, order.orderid, 'ACK', [[order.price, order.qty]], None, 0, 0)
+            ack_msg = Exch_msg(trader_id, order.orderid, 'ACK', [[order.price, order.qty]], None, 0, 0)
 
-                if verbose: print('OrderID:%d, ack:%s\n' % (order.orderid, ack_msg))
+            if verbose: print('OrderID:%d, ack:%s\n' % (order.orderid, ack_msg))
 
-                if ostyle == 'LIM' or ostyle == 'GFD':
-                    # GFD is just a LIM order with an expiry time
-                    response = pool.process_order_LIM(time, order, verbose)
+            if ostyle == 'LIM' or ostyle == 'GFD':
+                # GFD is just a LIM order with an expiry time
+                response = pool.process_order_LIM(time, order, verbose)
 
-                elif ostyle == 'MKT' or ostyle == 'AON' or ostyle == 'FOK' or ostyle == 'IOC':
-                    if ostyle == 'AON': pool.resting.append(order) # put it on the list of resting orders
-                    response = pool.process_order_take(time, order, verbose)
-                    # AON is a special case: if current response is that it FAILed, but has not timed out
-                    #                        then ignore the failure
-                    # and if it didn't fail, check to remove it from the MOB
-                    if ostyle == 'AON':
-                        if response['TraderMsgs'].event == 'FAIL':
-                                # it failed, but has it timed out yet?
-                                if time < order.styleparams['ExpiryTime']:
-                                        # it hasn't expired yet
-                                        # nothing to say back to the trader, nothing to write to tape
-                                        response['TraderMsgs'] = None
-                                        response['TapeEvents'] = None
-                        else:   # AON order executed successfully, remove it from the MOB
-                                pool.resting.remove(order)
+            elif ostyle == 'MKT' or ostyle == 'AON' or ostyle == 'FOK' or ostyle == 'IOC':
+                if ostyle == 'AON': pool.resting.append(order) # put it on the list of resting orders
+                response = pool.process_order_take(time, order, verbose)
+                # AON is a special case: if current response is that it FAILed, but has not timed out
+                #                        then ignore the failure
+                # and if it didn't fail, check to remove it from the MOB
+                if ostyle == 'AON':
+                    if response['TraderMsgs'].event == 'FAIL':
+                        # it failed, but has it timed out yet?
+                        if time < order.styleparams['ExpiryTime']:
+                            # it hasn't expired yet
+                            # nothing to say back to the trader, nothing to write to tape
+                            response['TraderMsgs'] = None
+                            response['TapeEvents'] = None
+                    else:   # AON order executed successfully, remove it from the MOB
+                        pool.resting.remove(order)
 
-                elif ostyle == 'LOC' or ostyle == 'MOC' or ostyle == 'LOO' or ostyle == 'MOO':
-                        # these are just placed on the relevant wait-list at the exchange
-                        # and then processed by mkt_open() or mkt_close()
-                        response = pool.process_order_pending(time, order, verbose)
+            elif ostyle == 'LOC' or ostyle == 'MOC' or ostyle == 'LOO' or ostyle == 'MOO':
+                # these are just placed on the relevant wait-list at the exchange
+                # and then processed by mkt_open() or mkt_close()
+                response = pool.process_order_pending(time, order, verbose)
 
-                elif ostyle == 'OCO' or ostyle == 'OSO':
-                        # processing of OSO and OCO orders is a recursive call of this method
-                        # that is, call process_order() on the first order in the OXO pair
-                        # then call or ignore the second order depending on outcome of the first
-                        # OCO and OSO are both defined via the following syntax...
-                        # ostyle=OSO or OCO; styleparams=[[order1], [order2]]
-                        # currently only defined for [order1] and [order2] both LIM type
+            elif ostyle == 'OCO' or ostyle == 'OSO':
+                # processing of OSO and OCO orders is a recursive call of this method
+                # that is, call process_order() on the first order in the OXO pair
+                # then call or ignore the second order depending on outcome of the first
+                # OCO and OSO are both defined via the following syntax...
+                # ostyle=OSO or OCO; styleparams=[[order1], [order2]]
+                # currently only defined for [order1] and [order2] both LIM type
 
-                        if len(order.styleparams) == 2:
-                                order1 = order.styleparams[0]
-                                order2 = order.styleparams[1]
-                                if order1.ostyle == 'LIM' and order2.ostyle == 'LIM':
-                                        sys.exit('Give up')
+                if len(order.styleparams) == 2:
+                    order1 = order.styleparams[0]
+                    order2 = order.styleparams[1]
+                    if order1.ostyle == 'LIM' and order2.ostyle == 'LIM':
+                        sys.exit('Give up')
 
-                        response = pool.process_order_OXO(time, order, verbose)
+                response = pool.process_order_OXO(time, order, verbose)
 
-                elif ostyle == 'ICE':
-                        # this boils down to a chain of successively refreshed OSO orders, until its all used up
-                        # so underneath it's LIM functionality only
-                        response = pool.process_order_ICE(time, order, verbose)
+            elif ostyle == 'ICE':
+                # this boils down to a chain of successively refreshed OSO orders, until its all used up
+                # so underneath it's LIM functionality only
+                response = pool.process_order_ICE(time, order, verbose)
 
-                else:
-                        sys.exit('FAIL: process_order given order style %s', ostyle)
+            else:
+                sys.exit('FAIL: process_order given order style %s', ostyle)
 
 
 
@@ -976,7 +1012,7 @@ class Exchange(Orderbook):
         trader_msgs = None
         tape_events = None
 
-        if bool(response):
+        if response != None:
             # non-null response should be dictionary with two items: list of trader messages and list of tape events
             if verbose: print('Response ---- ')
             trader_msgs = response["TraderMsgs"]
@@ -986,23 +1022,23 @@ class Exchange(Orderbook):
             # trader messages include details of fees charged by exchange for processing this order
             for msg in trader_msgs:
                     if msg.tid == trader_id:
-                            total_fees += msg.fee
-                            if verbose: print('Trader %s adding fee %d from msg %s' % (trader_id, msg.fee, msg))
+                        total_fees += msg.fee
+                        if verbose: print('Trader %s adding fee %d from msg %s' % (trader_id, msg.fee, msg))
             self.trader_recs[trader_id].balance += total_fees
             if verbose: print('Trader %s Exch %s: updated balance=%d' % (trader_id, self.eid, self.trader_recs[trader_id].balance))
 
             # record the tape events on the tape
             if len(tape_events) > 0:
-                    for event in tape_events:
-                            self.tape_update(event, verbose)
+                for event in tape_events:
+                    self.tape_update(event, verbose)
 
             if verbose:
-                    print('<Exch.Proc.Order(): tape_events=%s' % tape_events)
-                    s = '<Exch.Proc.Order(): trader_msgs=['
-                    for msg in trader_msgs:
-                            s = s + '[' + str(msg) + '], '
-                    s = s + ']'
-                    print(s)
+                print('<Exch.Proc.Order(): tape_events=%s' % tape_events)
+                s = '<Exch.Proc.Order(): trader_msgs=['
+                for msg in trader_msgs:
+                    s = s + '[' + str(msg) + '], '
+                s = s + ']'
+                print(s)
 
             # by this point, tape has been updated
             # so in principle only thing process_order hands back to calling level is messages for traders
@@ -1027,23 +1063,23 @@ class Exchange(Orderbook):
 
             tape_summary = None
             if len(tape_events) > 0:
-                    total_cost = 0
-                    total_qty = 0
-                    if verbose: print('tape_summary:')
-                    for event in tape_events:
-                            if event['type'] == 'Trade':
-                                    total_cost += event['price']
-                                    total_qty += event['qty']
-                                    if verbose: print('total_cost=%d; total_qty=%d' % (total_cost, total_qty))
-                    if total_qty > 0 :
-                            avg_cost = total_cost / total_qty
-                            if verbose: print('avg_cost=%d' % avg_cost)
-                            tape_summary = {'type': 'Trade',
-                                            'time': time,
-                                            'price': avg_cost,
-                                            'party1': None,
-                                            'party2': None,
-                                            'qty': total_qty}
+                total_cost = 0
+                total_qty = 0
+                if verbose: print('tape_summary:')
+                for event in tape_events:
+                    if event['type'] == 'Trade':
+                        total_cost += event['price']
+                        total_qty += event['qty']
+                        if verbose: print('total_cost=%d; total_qty=%d' % (total_cost, total_qty))
+                if total_qty > 0 :
+                    avg_cost = total_cost / total_qty
+                    if verbose: print('avg_cost=%d' % avg_cost)
+                    tape_summary = {'type': 'Trade',
+                                    'time': time,
+                                    'price': avg_cost,
+                                    'party1': None,
+                                    'party2': None,
+                                    'qty': total_qty}
 
             return {'tape_summary':tape_summary, 'trader_msgs':trader_msgs}
         else: return {'tape_summary':None, 'trader_msgs':None}
@@ -1055,14 +1091,14 @@ class Exchange(Orderbook):
 
         n_bids = len(self.lit.bids.orders)
         if n_bids > 0 :
-                best_bid_p = self.lit.bids.lob_anon[0][0]
+            best_bid_p = self.lit.bids.lob_anon[0][0]
         else:   best_bid_p = None
 
         n_asks = len(self.lit.asks.orders)
         if n_asks > 0:
-                best_ask_p = self.lit.asks.lob_anon[0][0]
+            best_ask_p = self.lit.asks.lob_anon[0][0]
         else:
-                best_ask_p = None
+            best_ask_p = None
 
         public_data = {}
         public_data['time'] = time
@@ -1080,44 +1116,38 @@ class Exchange(Orderbook):
         public_data['last_q'] = self.lit.last_trans_q
 
         if tape_depth == None :
-                public_data['tape'] = self.tape                 # the full thing
+            public_data['tape'] = self.tape                 # the full thing
         else:
-                public_data['tape'] = self.tape[-tape_depth:]   # depth-limited
+            public_data['tape'] = self.tape[-tape_depth:]   # depth-limited
 
         public_data['midprice'] = None
         public_data['microprice'] = None
         if n_bids>0 and n_asks>0 :
-                # neither side of the LOB is empty
-                best_bid_q= self.lit.bids.lob_anon[0][1]
-                best_ask_q = self.lit.asks.lob_anon[0][1]
-                public_data['midprice'] = self.lit.midprice(best_bid_p, best_bid_q, best_ask_p, best_ask_q)
-                public_data['microprice'] = self.lit.microprice(best_bid_p, best_bid_q, best_ask_p, best_ask_q)
+            # neither side of the LOB is empty
+            best_bid_q= self.lit.bids.lob_anon[0][1]
+            best_ask_q = self.lit.asks.lob_anon[0][1]
+            public_data['midprice'] = self.lit.midprice(best_bid_p, best_bid_q, best_ask_p, best_ask_q)
+            public_data['microprice'] = self.lit.microprice(best_bid_p, best_bid_q, best_ask_p, best_ask_q)
 
         if verbose:
-                print('Exchange.publish_lob: t=%s' % time)
-                print('BID_lob=%s' % public_data['bids']['lob'])
-                print('best=%s; worst=%s; n=%s ' % (best_bid_p, self.lit.bids.worst_price, n_bids))
-                print(str(self.lit.bids))
-                print('ASK_lob=%s' % public_data['asks']['lob'])
-                print('best=%s; worst=%s; n=%s ' % (best_ask_p, self.lit.asks.worst_price, n_asks))
-                print(str(self.lit.asks))
-                print('Midprice=%s; Microprice=%s' % (public_data['midprice'], public_data['microprice']))
-                print('Last transaction: time=%s; price=%s; qty=%s' % (public_data['last_t'],public_data['last_p'],public_data['last_q']))
-                print('tape[-3:]=%s'% public_data['tape'][-3:])
-                sys.stdout.flush()
+            print('Exchange.publish_lob: t=%s' % time)
+            print('BID_lob=%s' % public_data['bids']['lob'])
+            print('best=%s; worst=%s; n=%s ' % (best_bid_p, self.lit.bids.worst_price, n_bids))
+            print(str(self.lit.bids))
+            print('ASK_lob=%s' % public_data['asks']['lob'])
+            print('best=%s; worst=%s; n=%s ' % (best_ask_p, self.lit.asks.worst_price, n_asks))
+            print(str(self.lit.asks))
+            print('Midprice=%s; Microprice=%s' % (public_data['midprice'], public_data['microprice']))
+            print('Last transaction: time=%s; price=%s; qty=%s' % (public_data['last_t'],public_data['last_p'],public_data['last_q']))
+            print('tape[-3:]=%s'% public_data['tape'][-3:])
+            sys.stdout.flush()
 
 
         return public_data
 
-# When a new or amended, BI or eligible BDN4 is entered,
-# Turquoise Plato Block DiscoveryTM is prompted to
-# immediately check for a match against existing contra BIs and eligible BDNs.
-# Additionally following any Turquoise Plato UncrossTM
-# or following a reference price change,
-# the system checks to see whether it’s possible to match BIs
-# and eligible BDNs to identify possible block trading opportunities.
-# their matched BI will be expired automatically.
-class Discovery:
+# Discovery Service: match a new or amended BI or eligible BDN
+# TODO This Class should be a inner class in Exchange()?
+class Discovery(Orderbook):
     # Minimum Indication Value(MIV)
     # BI must be greater than or equal to MIT threshold to be accepted into Discovery
     miv = 200
@@ -1126,49 +1156,90 @@ class Discovery:
     # BDN must be greater than or equal to MIT threshold to be accepted into Discovery
     mnv = 200
 
-    # Block Discovery Notification(BND)
-    # A BDN is an attribute of an order sub type (OrderSubType "1" for BIs, "3" for BDNs)
-    # BDN can be set as default onto Orders
-    # Orders with BDN is eligible in Discovery
-    # TODO Is it necessary? All order.block > block_size will go pool.drk -> also discovery?
-    bnd = ''
+    # Maximum Indication Value
+    max_price = 400
 
-    # Primary Best Bid and Offer (PBBO)
-    def __init__(self, tid, price, reputation, order, msgs):
-        self.tid = tid
-        self.order = order
+    def __init__(self, eid=''):
+        self.eid = eid
+        self.bi = Orderbook(eid + "BI")
 
     def __str__(self):
-        s = f'tid={self.tid} order={self.order}'
+        s = f'eid={self.eid}'
         return s
+
+    # TODO what is the price?
+    def check_price_match(self, buyer, seller, price):
+        if buyer.limit_price == None and seller.limit_price == None:
+            return True
+        elif buyer.limit_price != None and seller.limit_price == None:
+            if buyer.limit_price >= price:
+                return True
+        elif buyer.limit_price == None and seller.limit_price != None:
+            if seller.limit_price <= price :
+                return True
+        elif buyer.limit_price != None and seller.limit_price != None:
+            if buyer.limit_price >= price and seller.limit_price <= price:
+                return True
+
+        return False
+
+    def check_size_match(self, buyer, seller):
+        if buyer.MES== seller.MES== None:
+            return True
+        elif buyer.MES != None and seller.MES== None:
+            if seller.quantity >= buyer.MES:
+                return True
+        elif buyer.MES== None and seller.MES != None:
+            if buyer.quantity >= seller.MES:
+                return True
+        elif buyer.MES != None and seller.MES != None:
+            if buyer.quantity >= seller.MES and seller.quantity >= buyer.MES:
+                return True
+
+        return False
 
     # Upon submission, system checks immediately
     # If a match is found then return OSR
     def match_block_indication(self, order):
 
+        # The list of OSR
+        osrs = []
+
+        buy_sell = {
+            'Bid': [1, self.buy_orders],
+            'Ask': [-1, self.sell_orders],
+        }
+
+        # It should never happen
+        if order.otype not in buy_sell:
+            sys.exit('BI order is neither Bid nor Ask')
+
+        if order.otype == 'Bid':
+            value = order.quantity * min(order.limit_price, self.lob['bids']['bestp'])
+
+        elif order.otype == 'Ask':
+            value = order.quantity * max(order.limit_price, self.lob['asks']['bestp'])
+
         # The value of BI has to be equal to or greater than the MIV threshold
-        # if it is a sell BI
-        if order.otype == 'Ask':
-                pass
+        if value >= self.miv and value < self.max_price:
 
-        # if it is a buy BI
-        elif order.otype == 'Bid':
-                pass
+            for oitem in buy_sell[order.otype][1]:
+                switch = ['#', order, oitem]
+                buyer = switch[buy_sell[order.otype][0]]
+                seller = switch[buy_sell[order.otype][0]*-1]
 
-        # it should not happand
-        else:
-                sys.exit('BI order is neither Bid nor Ask')
+                # Lookup the match
+                if self.check_price_match(buyer, seller, 400) and self.check_size_match(buyer, seller):
 
-        if order.min_size < self.miv:
-                return {}
+                    # Create OSRs
+                    osrs.append(self.order_submission_request(order, oitem))
+                    if seller.subtype == "BI":
+                        osrs.append(self.order_submission_request(oitem, order))
 
-
-
-
-        return self.order_submission_request()
+        return osrs
 
     # Order Submission Request (OSR)
-    def order_submission_request(self):
+    def order_submission_request(self, self_order, match_order):
         osr = {
                 'execType': 'L',   # Execution Type = L (Triggered)
                 'ordStatus': 0,    # Order Status = 0 (New)
@@ -1187,16 +1258,14 @@ class Discovery:
                         'securityExchange': ''
                 },                 # Financial Instrument of the Order to be submitted
                 'side': '',        # Side of the Order to be submitted
-                'reputationalScore': 0,
+                'reputationalScore': 0, # Reputation score
                 'TransactTime': '' # Time the message was generated
         }
+
         return osr
 
-    #
-    def add_qualifying_block_order(self):
-        pass
+    def update_reputation_score(self, bi_order, qbo_order):
 
-    def update_reputation_score(self):
         pass
 ##########################---Below lies the experiment/test-rig---##################
 
@@ -1364,50 +1433,50 @@ def customer_orders(time, last_update, traders, trader_stats, os, pending, base_
 
 
         def getorderprice(i, sched_end, sched, n, mode, issuetime):
-                # does the first schedule range include optional dynamic offset function(s)?
-                if len(sched[0]) > 2:
-                        offsetfn = sched[0][2][0]
-                        offsetfn_params = [sched_end] + [p for p in sched[0][2][1] ]
-                        if callable(offsetfn):
-                                # same offset for min and max
-                                offset_min = offsetfn(issuetime, offsetfn_params)
-                                offset_max = offset_min
-                        else:
-                                sys.exit('FAIL: 3rd argument of sched in getorderprice() should be [callable_fn [params]]')
-                        if len(sched[0]) > 3:
-                                # if second offset function is specfied, that applies only to the max value
-                                offsetfn = sched[0][3][0]
-                                offsetfn_params = [sched_end] + [p for p in sched[0][3][1] ]
-                                if callable(offsetfn):
-                                        # this function applies to max
-                                        offset_max = offsetfn(issuetime, offsetfn_params)
-                                else:
-                                        sys.exit('FAIL: 4th argument of sched in getorderprice() should be [callable_fn [params]]')
+            # does the first schedule range include optional dynamic offset function(s)?
+            if len(sched[0]) > 2:
+                offsetfn = sched[0][2][0]
+                offsetfn_params = [sched_end] + [p for p in sched[0][2][1] ]
+                if callable(offsetfn):
+                    # same offset for min and max
+                    offset_min = offsetfn(issuetime, offsetfn_params)
+                    offset_max = offset_min
                 else:
-                        offset_min = 0.0
-                        offset_max = 0.0
+                    sys.exit('FAIL: 3rd argument of sched in getorderprice() should be [callable_fn [params]]')
+                if len(sched[0]) > 3:
+                    # if second offset function is specfied, that applies only to the max value
+                    offsetfn = sched[0][3][0]
+                    offsetfn_params = [sched_end] + [p for p in sched[0][3][1] ]
+                    if callable(offsetfn):
+                            # this function applies to max
+                            offset_max = offsetfn(issuetime, offsetfn_params)
+                    else:
+                            sys.exit('FAIL: 4th argument of sched in getorderprice() should be [callable_fn [params]]')
+            else:
+                offset_min = 0.0
+                offset_max = 0.0
 
-                pmin = sysmin_check(offset_min + min(sched[0][0], sched[0][1]))
-                pmax = sysmax_check(offset_max + max(sched[0][0], sched[0][1]))
-                prange = pmax - pmin
-                stepsize = prange / (n - 1)
-                halfstep = round(stepsize / 2.0)
+            pmin = sysmin_check(offset_min + min(sched[0][0], sched[0][1]))
+            pmax = sysmax_check(offset_max + max(sched[0][0], sched[0][1]))
+            prange = pmax - pmin
+            stepsize = prange / (n - 1)
+            halfstep = round(stepsize / 2.0)
 
-                if mode == 'fixed':
-                        orderprice = pmin + int(i * stepsize)
-                elif mode == 'jittered':
-                        orderprice = pmin + int(i * stepsize) + random.randint(-halfstep, halfstep)
-                elif mode == 'random':
-                        if len(sched) > 1:
-                                # more than one schedule: choose one equiprobably
-                                s = random.randint(0, len(sched) - 1)
-                                pmin = sysmin_check(min(sched[s][0], sched[s][1]))
-                                pmax = sysmax_check(max(sched[s][0], sched[s][1]))
-                        orderprice = random.randint(pmin, pmax)
-                else:
-                        sys.exit('FAIL: Unknown mode in schedule')
-                orderprice = sysmin_check(sysmax_check(orderprice))
-                return orderprice
+            if mode == 'fixed':
+                    orderprice = pmin + int(i * stepsize)
+            elif mode == 'jittered':
+                    orderprice = pmin + int(i * stepsize) + random.randint(-halfstep, halfstep)
+            elif mode == 'random':
+                    if len(sched) > 1:
+                            # more than one schedule: choose one equiprobably
+                            s = random.randint(0, len(sched) - 1)
+                            pmin = sysmin_check(min(sched[s][0], sched[s][1]))
+                            pmax = sysmax_check(max(sched[s][0], sched[s][1]))
+                    orderprice = random.randint(pmin, pmax)
+            else:
+                    sys.exit('FAIL: Unknown mode in schedule')
+            orderprice = sysmin_check(sysmax_check(orderprice))
+            return orderprice
 
 
         def getissuetimes(n_traders, mode, interval, shuffle, fittointerval):
@@ -1482,55 +1551,55 @@ def customer_orders(time, last_update, traders, trader_stats, os, pending, base_
         max_qty = 1
 
         if len(pending) < 1:
-                # list of pending (to-be-issued) customer orders is empty, so generate a new one
-                new_pending = []
+            # list of pending (to-be-issued) customer orders is empty, so generate a new one
+            new_pending = []
 
-                # demand side (buyers)
-                issuetimes = getissuetimes(n_buyers, os['timemode'], os['interval'], shuffle_times, True)
-                ordertype = 'Bid'
-                orderstyle = 'LIM'
-                (sched, mode, sched_end) = getschedmode(time, os['dem'])
-                for t in range(n_buyers):
-                        issuetime = time + issuetimes[t]
-                        tname = 'B%02d' % t
-                        orderprice = getorderprice(t, sched_end, sched, n_buyers, mode, issuetime)
-                        orderqty = random.randint(1,max_qty)
-                        # order = Order(tname, ordertype, orderstyle, orderprice, orderqty, issuetime, None, oid)
-                        order = Assignment("CUS", tname, ordertype, orderstyle, orderprice, orderqty, issuetime, None, oid)
-                        oid += 1
-                        new_pending.append(order)
+            # demand side (buyers)
+            issuetimes = getissuetimes(n_buyers, os['timemode'], os['interval'], shuffle_times, True)
+            ordertype = 'Bid'
+            orderstyle = 'LIM'
+            (sched, mode, sched_end) = getschedmode(time, os['dem'])
+            for t in range(n_buyers):
+                issuetime = time + issuetimes[t]
+                tname = 'B%02d' % t
+                orderprice = getorderprice(t, sched_end, sched, n_buyers, mode, issuetime)
+                orderqty = random.randint(1,max_qty)
+                # order = Order(tname, ordertype, orderstyle, orderprice, orderqty, issuetime, None, oid)
+                order = Assignment("CUS", tname, ordertype, orderstyle, orderprice, orderqty, issuetime, None, oid)
+                oid += 1
+                new_pending.append(order)
 
-                # supply side (sellers)
-                issuetimes = getissuetimes(n_sellers, os['timemode'], os['interval'], shuffle_times, True)
-                ordertype = 'Ask'
-                orderstyle = 'LIM'
-                (sched, mode, sched_end) = getschedmode(time, os['sup'])
-                for t in range(n_sellers):
-                        issuetime = time + issuetimes[t]
-                        tname = 'S%02d' % t
-                        orderprice = getorderprice(t, sched_end, sched, n_sellers, mode, issuetime)
-                        orderqty = random.randint(1, max_qty)
-                        # order = Order(tname, ordertype, orderstyle, orderprice, orderqty, issuetime, None, oid)
-                        order = Assignment("CUS", tname, ordertype, orderstyle, orderprice, orderqty, issuetime, None, oid)
-                        oid += 1
-                        new_pending.append(order)
+            # supply side (sellers)
+            issuetimes = getissuetimes(n_sellers, os['timemode'], os['interval'], shuffle_times, True)
+            ordertype = 'Ask'
+            orderstyle = 'LIM'
+            (sched, mode, sched_end) = getschedmode(time, os['sup'])
+            for t in range(n_sellers):
+                issuetime = time + issuetimes[t]
+                tname = 'S%02d' % t
+                orderprice = getorderprice(t, sched_end, sched, n_sellers, mode, issuetime)
+                orderqty = random.randint(1, max_qty)
+                # order = Order(tname, ordertype, orderstyle, orderprice, orderqty, issuetime, None, oid)
+                order = Assignment("CUS", tname, ordertype, orderstyle, orderprice, orderqty, issuetime, None, oid)
+                oid += 1
+                new_pending.append(order)
         else:
-                # there are pending future orders: issue any whose timestamp is in the past
-                new_pending = []
-                for order in pending:
-                        if order.time < time:
-                                # this order should have been issued by now
-                                # issue it to the trader
-                                tname = order.trad_id
-                                response = traders[tname].add_cust_order(order, verbose)
-                                if verbose: print('Customer order: %s %s' % (response, order))
-                                if response == 'LOB_Cancel' :
-                                    cancellations.append(tname)
-                                    if verbose: print('Cancellations: %s' % (cancellations))
-                                # and then don't add it to new_pending (i.e., delete it)
-                        else:
-                                # this order stays on the pending list
-                                new_pending.append(order)
+            # there are pending future orders: issue any whose timestamp is in the past
+            new_pending = []
+            for order in pending:
+                if order.time < time:
+                    # this order should have been issued by now
+                    # issue it to the trader
+                    tname = order.trad_id
+                    response = traders[tname].add_cust_order(order, verbose)
+                    if verbose: print('Customer order: %s %s' % (response, order))
+                    if response == 'LOB_Cancel' :
+                        cancellations.append(tname)
+                        if verbose: print('Cancellations: %s' % (cancellations))
+                    # and then don't add it to new_pending (i.e., delete it)
+                else:
+                    # this order stays on the pending list
+                    new_pending.append(order)
         return [new_pending, cancellations, oid]
 
 
@@ -1559,7 +1628,8 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, sum
         exchanges = []
         for e in range(n_exchanges):
                 eid = "Exch%d" % e
-                exch = Exchange(eid)
+                discovery = Discovery(eid)
+                exch = Exchange(eid, discovery)
                 exchanges.append(exch)
                 if verbose: print('Exchange[%d] =%s' % (e, str(exchanges[e])))
 
@@ -1587,207 +1657,208 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, sum
 
         while time < endtime:
 
-                # how much time left, as a percentage?
-                time_left = (endtime - time) / duration
-                if verbose: print('\n\n%s; t=%08.2f (percent remaining: %4.1f/100) ' % (sess_id, time, time_left*100))
+            # how much time left, as a percentage?
+            time_left = (endtime - time) / duration
+            if verbose: print('\n\n%s; t=%08.2f (percent remaining: %4.1f/100) ' % (sess_id, time, time_left*100))
 
-                trade = None
+            trade = None
 
-                # get any new assignments (customer orders) for traders to execute
-                # and also any customer orders that require previous orders to be killed
-                [pending_cust_orders, kills, noid] = customer_orders(time, last_update, traders, trader_stats,
-                                                                     order_schedule, pending_cust_orders, next_order_id, orders_verbose)
+            # get any new assignments (customer orders) for traders to execute
+            # and also any customer orders that require previous orders to be killed
+            [pending_cust_orders, kills, noid] = customer_orders(time, last_update, traders, trader_stats,
+                                                                    order_schedule, pending_cust_orders, next_order_id, orders_verbose)
 
-                next_order_id = noid
+            next_order_id = noid
+
+            if verbose:
+                print('t:%f, noid=%d, pending_cust_orders:' % (time, noid))
+                for order in pending_cust_orders: print('%s; ' % str(order))
+
+            # if any newly-issued customer orders mean quotes on the LOB need to be cancelled, kill them
+            if len(kills) > 0:
+                if verbose: print('Kills: %s' % (kills))
+                for kill in kills:
+                    # if verbose: print('lastquote=%s' % traders[kill].lastquote)
+                    if traders[kill].lastquote != None :
+                        if verbose: print('Killing order %s' % (str(traders[kill].lastquote)))
+
+                        can_order = traders[kill].lastquote
+                        can_order.ostyle = "CAN"
+                        exch_response = exchanges[0].process_order(time, can_order, process_verbose)
+                        exch_msg = exch_response['trader_msgs']
+                        # do the necessary book-keeping
+                        # NB this assumes CAN results in a single message back from the exchange
+                        traders[kill].bookkeep(exch_msg[0], time, bookkeep_verbose)
+
+            for t in traders:
+                if len(traders[t].orders) > 0:
+                    # print("Tyme=%5.2d TID=%s Orders[0]=%s" % (time, traders[t].tid, traders[t].orders[0]))
+                    dummy = 0 # NOP
+
+            # get public lob data from each exchange
+            lobs = []
+            for e in range(n_exchanges):
+                exch = exchanges[e]
+                lob = exch.publish_lob(time, tape_depth, lob_verbose)
+                if verbose: print ('Exchange %d, Published LOB=%s' % (e, str(lob)))
+                lobs.append(lob)
+
+
+            # quantity-spike injection
+            # this next bit is a KLUDGE that is VERY FRAGILE and has lots of ARBITRARY CONSTANTS in it :-(
+            # it is introduced for George Church's project
+            # to edit this you have to know how many traders there are (specified in main loop)
+            # and you have to know the details of the supply and demand curves too (again, spec in main loop)
+            # before public release of this code, tidy it up and parameterise it nicely
+            # TODO this should not be in customer_orders()?
+            triggertime = 60
+            replenish_period = 20
+            highest_buyer_index = 10         # this buyer has the highest limit price
+            highest_seller_index = 20
+            big_qty = 222
+            if time > (triggertime - 3*timestep)  and ((time+3*timestep) % replenish_period) <= (2 * timestep):
+                # sys.exit('Bailing at injection trigger, time = %f' % time)
+
+                # here we inject big quantities into both buyer and seller sides... hopefully the injected traders will do a deal
+                pending_cust_orders[highest_buyer_index-1].qty = big_qty
+                pending_cust_orders[highest_seller_index-1].qty = big_qty
 
                 if verbose:
-                        print('t:%f, noid=%d, pending_cust_orders:' % (time, noid))
-                        for order in pending_cust_orders: print('%s; ' % str(order))
-
-                # if any newly-issued customer orders mean quotes on the LOB need to be cancelled, kill them
-                if len(kills) > 0:
-                        if verbose: print('Kills: %s' % (kills))
-                        for kill in kills:
-                                # if verbose: print('lastquote=%s' % traders[kill].lastquote)
-                                if traders[kill].lastquote != None :
-                                        if verbose: print('Killing order %s' % (str(traders[kill].lastquote)))
-
-                                        can_order = traders[kill].lastquote
-                                        can_order.ostyle = "CAN"
-                                        exch_response = exchanges[0].process_order(time, can_order, process_verbose)
-                                        exch_msg = exch_response['trader_msgs']
-                                        # do the necessary book-keeping
-                                        # NB this assumes CAN results in a single message back from the exchange
-                                        traders[kill].bookkeep(exch_msg[0], time, bookkeep_verbose)
-
-                for t in traders:
-                        if len(traders[t].orders) > 0:
-                                # print("Tyme=%5.2d TID=%s Orders[0]=%s" % (time, traders[t].tid, traders[t].orders[0]))
-                                dummy = 0 # NOP
-
-                # get public lob data from each exchange
-                lobs = []
-                for e in range(n_exchanges):
-                        exch = exchanges[e]
-                        lob = exch.publish_lob(time, tape_depth, lob_verbose)
-                        if verbose: print ('Exchange %d, Published LOB=%s' % (e, str(lob)))
-                        lobs.append(lob)
+                    print ('t:%f SPIKE INJECTION (Post) Exchange %d, Published LOB=%s' % (time, e, str(lob)))
+                    print('t:%f, Spike Injection: , microp=%s, pending_cust_orders:' % (time, lob['microprice']) )
+                    for order in pending_cust_orders: print('%s; ' % str(order))
 
 
-                # quantity-spike injection
-                # this next bit is a KLUDGE that is VERY FRAGILE and has lots of ARBITRARY CONSTANTS in it :-(
-                # it is introduced for George Church's project
-                # to edit this you have to know how many traders there are (specified in main loop)
-                # and you have to know the details of the supply and demand curves too (again, spec in main loop)
-                # before public release of this code, tidy it up and parameterise it nicely
-                triggertime = 60
-                replenish_period = 20
-                highest_buyer_index = 10         # this buyer has the highest limit price
-                highest_seller_index = 20
-                big_qty = 222
-                if time > (triggertime - 3*timestep)  and ((time+3*timestep) % replenish_period) <= (2 * timestep):
-                        # sys.exit('Bailing at injection trigger, time = %f' % time)
+            # get a quote (or None) from a randomly chosen trader
 
-                        # here we inject big quantities into both buyer and seller sides... hopefully the injected traders will do a deal
-                        pending_cust_orders[highest_buyer_index-1].qty = big_qty
-                        pending_cust_orders[highest_seller_index-1].qty = big_qty
+            # first randomly select a trader id
+            old_tid = tid
+            while tid == old_tid:
+                tid = list(traders.keys())[random.randint(0, len(traders) - 1)]
 
-                        if verbose: print ('t:%f SPIKE INJECTION (Post) Exchange %d, Published LOB=%s' % (time, e, str(lob)))
-                        if verbose:
-                                print('t:%f, Spike Injection: , microp=%s, pending_cust_orders:' % (time, lob['microprice']) )
-                                for order in pending_cust_orders: print('%s; ' % str(order))
+            # currently, all quotes/orders are issued only to the single exchange at exchanges[0]
+            # it is that exchange's responsibility to then deal with Order Protection / trade-through (Reg NMS Rule611)
+            # i.e. the exchange logic could/should be extended to check the best LOB price of each other exchange
+            # that is yet to be implemented here
+            order = traders[tid].getorder(time, time_left, lobs[0], verbose)
 
 
-                # get a quote (or None) from a randomly chosen trader
+            if verbose: print('Trader Order: %s' % str(order))
 
-                # first randomly select a trader id
-                old_tid = tid
-                while tid == old_tid:
-                        tid = list(traders.keys())[random.randint(0, len(traders) - 1)]
+            if order != None:
 
-                # currently, all quotes/orders are issued only to the single exchange at exchanges[0]
-                # it is that exchange's responsibility to then deal with Order Protection / trade-through (Reg NMS Rule611)
-                # i.e. the exchange logic could/should be extended to check the best LOB price of each other exchange
-                # that is yet to be implemented here
-                order = traders[tid].getorder(time, time_left, lobs[0], verbose)
+                order.myref = traders[tid].orders[0].assignmentid  # attach customer order ID to this exchange order
+                if verbose: print('Order with myref=%s' % order.myref)
 
-
-                if verbose: print('Trader Order: %s' % str(order))
-
-                if order != None:
-
-                    order.myref = traders[tid].orders[0].assignmentid  # attach customer order ID to this exchange order
-                    if verbose: print('Order with myref=%s' % order.myref)
-
-                    # Sanity check: catch bad traders here
-                    traderprice = traders[tid].orders[0].price
-                    if order.otype == 'Ask' and order.price < traderprice: sys.exit('Bad ask: Trader.price %s, Quote: %s' % (traderprice,order))
-                    if order.otype == 'Bid' and order.price > traderprice: sys.exit('Bad bid: Trader.price %s, Quote: %s' % (traderprice,order))
+                # Sanity check: catch bad traders here
+                traderprice = traders[tid].orders[0].price
+                if order.otype == 'Ask' and order.price < traderprice: sys.exit('Bad ask: Trader.price %s, Quote: %s' % (traderprice,order))
+                if order.otype == 'Bid' and order.price > traderprice: sys.exit('Bad bid: Trader.price %s, Quote: %s' % (traderprice,order))
 
 
-                    # how many quotes does this trader already have sat on an exchange?
+                # how many quotes does this trader already have sat on an exchange?
 
-                    if len(traders[tid].quotes) >= traders[tid].max_quotes :
-                            # need to clear a space on the trader's list of quotes, by deleting one
-                            # new quote replaces trader's oldest previous quote
-                            # bit of a  kludge -- just deletes oldest quote, which is at head of list
-                            # THIS SHOULD BE IN TRADER NOT IN MAIN LOOP?? TODO
-                            can_order = traders[tid].quotes[0]
-                            if verbose: print('> can_order %s' % str(can_order))
-                            can_order.ostyle = "CAN"
-                            if verbose: print('> can_order %s' % str(can_order))
+                if len(traders[tid].quotes) >= traders[tid].max_quotes :
+                    # need to clear a space on the trader's list of quotes, by deleting one
+                    # new quote replaces trader's oldest previous quote
+                    # bit of a  kludge -- just deletes oldest quote, which is at head of list
+                    # THIS SHOULD BE IN TRADER NOT IN MAIN LOOP?? TODO
+                    can_order = traders[tid].quotes[0]
+                    if verbose: print('> can_order %s' % str(can_order))
+                    can_order.ostyle = "CAN"
+                    if verbose: print('> can_order %s' % str(can_order))
 
-                            # send cancellation to exchange
-                            exch_response = exchanges[0].process_order(time, can_order, process_verbose)
-                            exch_msg = exch_response['trader_msgs']
-                            tape_sum = exch_response['tape_summary']
-
-                            if verbose:
-                                    print('>Exchanges[0]ProcessOrder: tradernquotes=%d, quotes=[' % len(traders[tid].quotes))
-                                    for q in traders[tid].quotes: print('%s' % str(q))
-                                    print(']')
-                                    for t in traders:
-                                            if len(traders[t].orders) > 0:
-                                                    # print(">Exchanges[0]ProcessOrder: Tyme=%5.2d TID=%s Orders[0]=%s" % (time, traders[t].tid, traders[t].orders[0]))
-                                                    NOP = 0
-                                            if len(traders[t].quotes) > 0:
-                                                    # print(">Exchanges[0]ProcessOrder: Tyme=%5.2d TID=%s Quotes[0]=%s" % (time, traders[t].tid, traders[t].quotes[0]))
-                                                    NOP = 0
-
-                            # do the necessary book-keeping
-                            # NB this assumes CAN results in a single message back from the exchange
-                            traders[tid].bookkeep(exch_msg[0], time, bookkeep_verbose)
-
-                    if verbose:
-                            # print('post-check: tradernquotes=%d, quotes=[' % len(traders[tid].quotes))
-                            for q in traders[tid].quotes: print('%s' % str(q))
-                            print(']')
-                            for t in traders:
-                                if len(traders[t].orders) > 0:
-                                        # print("PostCheck Tyme=%5.2d TID=%s Orders[0]=%s" % (time, traders[t].tid, traders[t].orders[0]))
-                                        if len(traders[t].quotes) > 0:
-                                                # print("PostCheck Tyme=%5.2d TID=%s Quotes[0]=%s" % (time, traders[t].tid, traders[t].quotes[0]))
-                                                NOP = 0
-
-                                if len(traders[t].orders) > 0 and traders[t].orders[0].astyle == "CAN":
-                                        sys.stdout.flush()
-                                        sys.exit("CAN error")
-
-
-                    # add order to list of live orders issued by this trader
-                    traders[tid].quotes.append(order)
-
-                    if verbose: print('Trader %s quotes[-1]: %s' % (tid, traders[tid].quotes[-1]))
-
-                    # send this order to exchange and receive response
-                    exch_response = exchanges[0].process_order(time, order, process_verbose)
-                    exch_msgs = exch_response['trader_msgs']
+                    # send cancellation to exchange
+                    exch_response = exchanges[0].process_order(time, can_order, process_verbose)
+                    exch_msg = exch_response['trader_msgs']
                     tape_sum = exch_response['tape_summary']
 
-                    # because the order just processed might have changed things, now go through each
-                    # order resting at the exchange and see if it can now be processed
-                    # applies to AON, ICE, OSO, and OCO
-
-
-
-
                     if verbose:
-                            print('Exch_Msgs: ')
-                            if exch_msgs == None: print('None')
-                            else:
-                                    for msg in exch_msgs:
-                                        print('Msg=%s' % msg)
+                        print('>Exchanges[0]ProcessOrder: tradernquotes=%d, quotes=[' % len(traders[tid].quotes))
+                        for q in traders[tid].quotes: print('%s' % str(q))
+                        print(']')
+                        for t in traders:
+                                if len(traders[t].orders) > 0:
+                                    print(">Exchanges[0]ProcessOrder: Tyme=%5.2d TID=%s Orders[0]=%s" % (time, traders[t].tid, traders[t].orders[0]))
+                                    NOP = 0
+                                if len(traders[t].quotes) > 0:
+                                    print(">Exchanges[0]ProcessOrder: Tyme=%5.2d TID=%s Quotes[0]=%s" % (time, traders[t].tid, traders[t].quotes[0]))
+                                    NOP = 0
 
-                    if exch_msgs != None and len(exch_msgs) > 0:
-                                # messages to process
-                                for msg in exch_msgs:
-                                        if verbose: print('Message: %s' % msg)
-                                        traders[msg.tid].bookkeep(msg, time, bookkeep_verbose)
+                    # do the necessary book-keeping
+                    # NB this assumes CAN results in a single message back from the exchange
+                    traders[tid].bookkeep(exch_msg[0], time, bookkeep_verbose)
 
-
-                    # traders respond to whatever happened
-                    # needs to be updated for multiple exchanges
-                    lob = exchanges[0].publish_lob(time, tape_depth, lob_verbose)
-
-                    s = '%6.2f, ' % time
+                if verbose:
+                    # print('post-check: tradernquotes=%d, quotes=[' % len(traders[tid].quotes))
+                    for q in traders[tid].quotes: print('%s' % str(q))
+                    print(']')
                     for t in traders:
-                                # NB respond just updates trader's internal variables
-                                # doesn't alter the LOB, so processing each trader in
-                                # sequence (rather than random/shuffle) isn't a problem
-                                traders[t].respond(time, lob, tape_sum, respond_verbose)
+                        if len(traders[t].orders) > 0:
+                            # print("PostCheck Tyme=%5.2d TID=%s Orders[0]=%s" % (time, traders[t].tid, traders[t].orders[0]))
+                            if len(traders[t].quotes) > 0:
+                                # print("PostCheck Tyme=%5.2d TID=%s Quotes[0]=%s" % (time, traders[t].tid, traders[t].quotes[0]))
+                                NOP = 0
 
-                                if traders[t].ttype == 'ISHV':
-                                        print('%6.2f, ISHV Print, %s' % (time, str(traders[t])))
-                                        lq = traders[t].lastquote
-                                        print('lq = %s' % lq)
-                                        if lq != None :
-                                                price = lq.price
-                                        else: price = None
-                                        if price == None: s = s + '-1, '
-                                        else: s = s + '%s, ' % price
-                    prices_data_file.write('%s\n' % s)
+                        if len(traders[t].orders) > 0 and traders[t].orders[0].astyle == "CAN":
+                            sys.stdout.flush()
+                            sys.exit("CAN error")
 
-                time = time + timestep
+
+                # add order to list of live orders issued by this trader
+                traders[tid].quotes.append(order)
+
+                if verbose: print('Trader %s quotes[-1]: %s' % (tid, traders[tid].quotes[-1]))
+
+                # send this order to exchange and receive response
+                exch_response = exchanges[0].process_order(time, order, process_verbose)
+                exch_msgs = exch_response['trader_msgs']
+                tape_sum = exch_response['tape_summary']
+
+                # because the order just processed might have changed things, now go through each
+                # order resting at the exchange and see if it can now be processed
+                # applies to AON, ICE, OSO, and OCO
+
+
+
+
+                if verbose:
+                    print('Exch_Msgs: ')
+                    if exch_msgs == None: print('None')
+                    else:
+                        for msg in exch_msgs:
+                            print('Msg=%s' % msg)
+
+                if exch_msgs != None and len(exch_msgs) > 0:
+                    # messages to process
+                    for msg in exch_msgs:
+                        if verbose: print('Message: %s' % msg)
+                        traders[msg.tid].bookkeep(msg, time, bookkeep_verbose)
+
+
+                # traders respond to whatever happened
+                # needs to be updated for multiple exchanges
+                lob = exchanges[0].publish_lob(time, tape_depth, lob_verbose)
+
+                s = '%6.2f, ' % time
+                for t in traders:
+                    # NB respond just updates trader's internal variables
+                    # doesn't alter the LOB, so processing each trader in
+                    # sequence (rather than random/shuffle) isn't a problem
+                    traders[t].respond(time, lob, tape_sum, respond_verbose)
+
+                    if traders[t].ttype == 'ISHV':
+                        # print('%6.2f, ISHV Print, %s' % (time, str(traders[t])))
+                        lq = traders[t].lastquote
+                        # print('lq = %s' % lq)
+                        if lq != None :
+                                price = lq.price
+                        else: price = None
+                        if price == None: s = s + '-1, '
+                        else: s = s + '%s, ' % price
+                prices_data_file.write('%s\n' % s)
+
+            time = time + timestep
 
 
         # end of an experiment -- dump the tape
@@ -1796,23 +1867,23 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, sum
 
         # traders dump their blotters
         for t in traders:
-                tid = traders[t].tid
-                ttype = traders[t].ttype
-                balance = traders[t].balance
-                blot = traders[t].blotter
-                blot_len = len(blot)
-                # build csv string for all events in blotter
-                csv = ''
-                estr = "TODO "
-                for e in blot:
-                        # print(blot)
-                        # estr = '%s, %s, %s, %s, %s, %s, ' % (e['type'], e['time'], e['price'], e['qty'], e['party1'], e['party2'])
-                        csv = csv + estr
-                blotterdumpfile.write('%s, %s, %s, %s, %s, %s\n' % (sess_id, tid, ttype, balance, blot_len, csv))
+            tid = traders[t].tid
+            ttype = traders[t].ttype
+            balance = traders[t].balance
+            blot = traders[t].blotter
+            blot_len = len(blot)
+            # build csv string for all events in blotter
+            csv = ''
+            estr = "TODO "
+            for e in blot:
+                    # print(blot)
+                    # estr = '%s, %s, %s, %s, %s, %s, ' % (e['type'], e['time'], e['price'], e['qty'], e['party1'], e['party2'])
+                    csv = csv + estr
+            blotterdumpfile.write('%s, %s, %s, %s, %s, %s\n' % (sess_id, tid, ttype, balance, blot_len, csv))
 
         # write summary trade_stats for this experiment (end-of-session summary ONLY)
         for e in range(n_exchanges):
-                trade_stats(sess_id, traders, summaryfile, time, exchanges[e].publish_lob(time, None, lob_verbose))
+            trade_stats(sess_id, traders, summaryfile, time, exchanges[e].publish_lob(time, None, lob_verbose))
 
 
 
@@ -1857,18 +1928,18 @@ if __name__ == "__main__":
     sys.stdout.flush()
 
     for session in range(1):
-            sess_id = 'Test%02d' % session
-            print('Session %s; ' % sess_id)
+        sess_id = 'Test%02d' % session
+        print('Session %s; ' % sess_id)
 
-            fname = sess_id + 'balances.csv'
-            summary_data_file = open(fname, 'w')
+        fname = sess_id + 'balances.csv'
+        summary_data_file = open(fname, 'w')
 
-            fname = sess_id + 'tapes.csv'
-            tape_data_file = open(fname, 'w')
+        fname = sess_id + 'tapes.csv'
+        tape_data_file = open(fname, 'w')
 
-            fname = sess_id + 'blotters.csv'
-            blotter_data_file = open(fname, 'w')
+        fname = sess_id + 'blotters.csv'
+        blotter_data_file = open(fname, 'w')
 
-            market_session(sess_id, start_time, end_time, traders_spec, order_sched, summary_data_file, tape_data_file, blotter_data_file, True, False)
+        market_session(sess_id, start_time, end_time, traders_spec, order_sched, summary_data_file, tape_data_file, blotter_data_file, True, False)
 
     print('\n Experiment Finished')
