@@ -241,6 +241,7 @@ class Orderbook_half:
             for ord in self.orders: print("{%s: %s}" % (ord,str(self.orders[ord])))
 
         oid = order.orderid
+
         if len(self.orders)>0 and (self.orders.get(oid) != None) :
             if verbose: print('Deleting order %s' % oid)
             o_qty = self.orders[oid].qty
@@ -397,7 +398,6 @@ class Orderbook_half:
 
             if verbose: print('BK_TAKE: best_lob _price=%d _order=%s qty=%d oid_from=%d oid_to=%d tid_from=%s tid_to=%s\n' %
                                 (best_lob_price, best_lob_order, best_lob_order_qty, oid_from, oid_to, tid_from, tid_to))
-
 
             # walk the book: does this order consume current best order on book?
             if best_lob_order_qty >= qty_remaining:
@@ -855,10 +855,11 @@ class Exchange(Orderbook):
 
         # print('Dumping tape s.tape=')
         for ti in self.tape:
-            print('%s' % ti)
+            # print('%s' % ti)
+            pass
 
         for tapeitem in self.tape:
-            print('tape_dump: tapitem=%s' % tapeitem)
+            # print('tape_dump: tapitem=%s' % tapeitem)
             if tapeitem['type'] == 'Trade':
                 dumpfile.write('%s, %s, %s, %s, %s\n' % (session_id, tapeitem['pool_id'], tapeitem['time'], tapeitem['price'], str(tapeitem)))
 
@@ -901,31 +902,31 @@ class Exchange(Orderbook):
             if verbose: print('Process_order: qty=%d routes to LIT pool' % order.qty)
             pool = self.lit
         else:
+            if verbose: print('Process_order: qty=%d routes to DARK pool' % order.qty)
+            pool = self.drk
 
-            if order.subtype == 'BI':
-                if verbose: print(f'order={order.subtype} : qty={order.qty} routes to Discovery Service')
-                osrs = self.discovery.match_block_indication(order, verbose)
+            # if order.ordersubtype == 'BI':
+            #     if verbose: print(f'order={order.ordersubtype} : qty={order.qty} routes to Discovery Service')
+            #     osrs = self.discovery.match_block_indication(order, verbose)
 
-                # No match found. Add order to orderbook
-                if len(osrs) == 0:
-                    self.discovery.add_lim_bi_order(order, verbose)
-                    return {'tape_summary':None, 'trader_msgs':None}
-                else:
-                    # TODO Return OSR?
-                    # TODO Get QBO
-                    # TODO Pass it to self.drk and update the reputation score
-                    pass
+            #     # No match found. Add order to orderbook
+            #     if len(osrs) == 0:
+            #         self.discovery.add_lim_bi_order(order, verbose)
+            #         return {'tape_summary':None, 'trader_msgs':None}
+            #     else:
+            #         # TODO Return OSR? Next order is QBO?
+            #         # TODO Get QBO -> should it be in market_session?
+            #         # TODO Pass it to self.drk and update the reputation score
+            #         pass
 
-            elif order.subtyoe == 'BDN':
-                # add eligible BDN order to discovery order book
-                self.discovery.add_lim_bi_order(order, verbose)
+            # elif order.ordersubtype == 'BDN':
+            #     # add eligible BDN order to discovery order book
+            #     self.discovery.add_lim_bi_order(order, verbose)
 
-                if verbose: print('Process_order: qty=%d routes to DARK pool' % order.qty)
-                pool = self.drk
+            #     if verbose: print('Process_order: qty=%d routes to DARK pool' % order.qty)
+            #     pool = self.drk
 
-            else:
-                if verbose: print('Process_order: qty=%d routes to DARK pool' % order.qty)
-                pool = self.drk
+            # else:
 
 
         # Cancellations don't generate new order-ids
@@ -1323,11 +1324,11 @@ def populate_market(traders_spec, traders, shuffle, verbose):
             elif robottype == 'SHVR':
                 return Trader_Shaver('SHVR', name, 0.00, 0)
             elif robottype == 'ISHV':
-                return Trader_ISHV('ISHV', name, 0.00, 0)
+                return Trader_ISHV('ISHV', name, 0.00, 0, 0.5)
             elif robottype == 'SNPR':
                 return Trader_Sniper('SNPR', name, 0.00, 0)
             elif robottype == 'ZIP':
-                return Trader_ZIP('ZIP', name, 0.00, 0)
+                return Trader_ZIP('ZIP', name, 0.00, 0, 0.5)
             elif robottype == 'MAA':
                 pass
                 # return Trader_AA('MAA', name, 0.00, 0)
@@ -1351,7 +1352,7 @@ def populate_market(traders_spec, traders, shuffle, verbose):
         n_buyers = 0
         for bs in traders_spec['buyers']:
             ttype = bs[0]
-            for b in range(bs[1]):
+            for _ in range(bs[1]):
                 tname = 'B%02d' % n_buyers  # buyer i.d. string
                 traders[tname] = trader_type(ttype, tname)
                 n_buyers = n_buyers + 1
@@ -1365,7 +1366,7 @@ def populate_market(traders_spec, traders, shuffle, verbose):
         n_sellers = 0
         for ss in traders_spec['sellers']:
             ttype = ss[0]
-            for s in range(ss[1]):
+            for _ in range(ss[1]):
                 tname = 'S%02d' % n_sellers  # buyer i.d. string
                 traders[tname] = trader_type(ttype, tname)
                 n_sellers = n_sellers + 1
@@ -1375,13 +1376,13 @@ def populate_market(traders_spec, traders, shuffle, verbose):
 
         if shuffle: shuffle_traders('S', n_sellers, traders)
 
-        if verbose:
-            for t in range(n_buyers):
-                bname = 'B%02d' % t
-                print(traders[bname])
-            for t in range(n_sellers):
-                bname = 'S%02d' % t
-                print(traders[bname])
+        # if verbose:
+        # for t in range(n_buyers):
+        #     bname = 'B%02d' % t
+        #     print(traders[bname])
+        # for t in range(n_sellers):
+        #     bname = 'S%02d' % t
+        #     print(traders[bname])
 
 
         return {'n_buyers':n_buyers, 'n_sellers':n_sellers}
@@ -1548,7 +1549,8 @@ def customer_orders(time, last_update, traders, trader_stats, os, pending, base_
 
         oid = base_oid
 
-        max_qty = 1
+        min_qty = 200
+        max_qty = 300
 
         if len(pending) < 1:
             # list of pending (to-be-issued) customer orders is empty, so generate a new one
@@ -1563,7 +1565,7 @@ def customer_orders(time, last_update, traders, trader_stats, os, pending, base_
                 issuetime = time + issuetimes[t]
                 tname = 'B%02d' % t
                 orderprice = getorderprice(t, sched_end, sched, n_buyers, mode, issuetime)
-                orderqty = random.randint(1,max_qty)
+                orderqty = random.randint(min_qty,max_qty)
                 # order = Order(tname, ordertype, orderstyle, orderprice, orderqty, issuetime, None, oid)
                 order = Assignment("CUS", tname, ordertype, orderstyle, orderprice, orderqty, issuetime, None, oid)
                 oid += 1
@@ -1578,7 +1580,7 @@ def customer_orders(time, last_update, traders, trader_stats, os, pending, base_
                 issuetime = time + issuetimes[t]
                 tname = 'S%02d' % t
                 orderprice = getorderprice(t, sched_end, sched, n_sellers, mode, issuetime)
-                orderqty = random.randint(1, max_qty)
+                orderqty = random.randint(min_qty, max_qty)
                 # order = Order(tname, ordertype, orderstyle, orderprice, orderqty, issuetime, None, oid)
                 order = Assignment("CUS", tname, ordertype, orderstyle, orderprice, orderqty, issuetime, None, oid)
                 oid += 1
@@ -1678,12 +1680,13 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, sum
             if len(kills) > 0:
                 if verbose: print('Kills: %s' % (kills))
                 for kill in kills:
-                    # if verbose: print('lastquote=%s' % traders[kill].lastquote)
+                    if verbose: print('lastquote=%s' % traders[kill].lastquote)
                     if traders[kill].lastquote != None :
                         if verbose: print('Killing order %s' % (str(traders[kill].lastquote)))
 
                         can_order = traders[kill].lastquote
                         can_order.ostyle = "CAN"
+                        if verbose: print('can_order: %s' % (can_order))
                         exch_response = exchanges[0].process_order(time, can_order, process_verbose)
                         exch_msg = exch_response['trader_msgs']
                         # do the necessary book-keeping
@@ -1716,17 +1719,17 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, sum
             highest_buyer_index = 10         # this buyer has the highest limit price
             highest_seller_index = 20
             big_qty = 222
-            if time > (triggertime - 3*timestep)  and ((time+3*timestep) % replenish_period) <= (2 * timestep):
-                # sys.exit('Bailing at injection trigger, time = %f' % time)
+            # if time > (triggertime - 3*timestep)  and ((time+3*timestep) % replenish_period) <= (2 * timestep):
+            #     # sys.exit('Bailing at injection trigger, time = %f' % time)
 
-                # here we inject big quantities into both buyer and seller sides... hopefully the injected traders will do a deal
-                pending_cust_orders[highest_buyer_index-1].qty = big_qty
-                pending_cust_orders[highest_seller_index-1].qty = big_qty
+            #     # here we inject big quantities into both buyer and seller sides... hopefully the injected traders will do a deal
+            #     pending_cust_orders[highest_buyer_index-1].qty = big_qty
+            #     pending_cust_orders[highest_seller_index-1].qty = big_qty
 
-                if verbose:
-                    print ('t:%f SPIKE INJECTION (Post) Exchange %d, Published LOB=%s' % (time, e, str(lob)))
-                    print('t:%f, Spike Injection: , microp=%s, pending_cust_orders:' % (time, lob['microprice']) )
-                    for order in pending_cust_orders: print('%s; ' % str(order))
+            #     if verbose:
+            #         print ('t:%f SPIKE INJECTION (Post) Exchange %d, Published LOB=%s' % (time, e, str(lob)))
+            #         print('t:%f, Spike Injection: , microp=%s, pending_cust_orders:' % (time, lob['microprice']) )
+            #         for order in pending_cust_orders: print('%s; ' % str(order))
 
 
             # get a quote (or None) from a randomly chosen trader
@@ -1742,7 +1745,7 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, sum
             # that is yet to be implemented here
             order = traders[tid].getorder(time, time_left, lobs[0], verbose)
 
-
+            print(order)
             if verbose: print('Trader Order: %s' % str(order))
 
             if order != None:
@@ -1846,7 +1849,6 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, sum
                     # doesn't alter the LOB, so processing each trader in
                     # sequence (rather than random/shuffle) isn't a problem
                     traders[t].respond(time, lob, tape_sum, respond_verbose)
-
                     if traders[t].ttype == 'ISHV':
                         # print('%6.2f, ISHV Print, %s' % (time, str(traders[t])))
                         lq = traders[t].lastquote
@@ -1856,14 +1858,13 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, sum
                         else: price = None
                         if price == None: s = s + '-1, '
                         else: s = s + '%s, ' % price
+
                 prices_data_file.write('%s\n' % s)
 
             time = time + timestep
 
-
         # end of an experiment -- dump the tape
         exchanges[0].dump_tape(sess_id, tapedumpfile, 'keep')
-
 
         # traders dump their blotters
         for t in traders:
@@ -1929,7 +1930,7 @@ if __name__ == "__main__":
 
     for session in range(1):
         sess_id = 'Test%02d' % session
-        print('Session %s; ' % sess_id)
+        # print('Session %s; ' % sess_id)
 
         fname = sess_id + 'balances.csv'
         summary_data_file = open(fname, 'w')

@@ -10,7 +10,7 @@ from BSE2_msg_classes import Assignment, Order, Exch_msg
 # all Traders have a trader id, bank balance, blotter, and list of orders to execute
 class Trader:
 
-        def __init__(self, ttype, tid, balance, time):
+        def __init__(self, ttype, tid, balance, time, weight=0, reputation=100):
                 self.ttype = ttype      # what type / strategy this trader is
                 self.tid = tid          # trader unique ID code
                 self.balance = balance  # money in the bank
@@ -26,6 +26,8 @@ class Trader:
                 self.n_trades = 0       # how many trades has this trader done?
                 self.lastquote = None   # record of what its most recent quote was/is (incl price)
 
+                self.weight = weight
+                self.reputation = reputation
 
         def __str__(self):
                 blotterstring = ''
@@ -161,10 +163,10 @@ class Trader:
                                                   (transactionprice, limitprice, qty, profit, self.n_trades, age, self.balance))
 
                                 if profit < 0 :
-                                        print (self.tid)
-                                        print (self.ttype)
-                                        print (profit)
-                                        print (exch_order)
+                                        # print (self.tid)
+                                        # print (self.ttype)
+                                        # print (profit)
+                                        # print (exch_order)
                                         sys.exit('Exit: Negative profit')
 
                         if verbose: print('%s: profit=%d bal=%d profit/time=%f' %
@@ -331,7 +333,7 @@ class Trader_ISHV(Trader):
                                 if imbalance < 0 : shaving = 1 # imbalance in favour of buyers, so shave slowly
                                 else: shaving = shave_c + (shave_m * int(imbalance*100)/100) # shave ever larger amounts
 
-                                print('t:%f, ISHV (Bid) imbalance=%s shaving=%s' % (time, imbalance, shaving))
+                                if verbose: print('t:%f, ISHV (Bid) imbalance=%s shaving=%s' % (time, imbalance, shaving))
 
                                 if len(lob['bids']['lob']) > 0:
                                         quoteprice = lob['bids']['bestp'] + shaving
@@ -344,7 +346,7 @@ class Trader_ISHV(Trader):
                                 if imbalance > 0 : shaving = 1
                                 else: shaving = shave_c - (shave_m * int(imbalance*100)/100)
 
-                                print('t:%f, ISHV (Ask) imbalance=%s shaving=%s' % (time, imbalance, shaving))
+                                if verbose: print('t:%f, ISHV (Ask) imbalance=%s shaving=%s' % (time, imbalance, shaving))
 
                                 if len(lob['asks']['lob']) > 0:
                                         quoteprice = lob['asks']['bestp'] - shaving
@@ -353,7 +355,13 @@ class Trader_ISHV(Trader):
                                 else:
                                         quoteprice = 200 #KLUDGE -- come back to fix todo
 
-                        order = Order(self.tid, otype, ostyle, quoteprice, self.orders[0].qty, time, None, verbose)
+                        subtype = None
+                        big_block = 200
+
+                        if self.orders[0].qty >= big_block:
+                            subtype = random.choices(population=['BI','BDN'],weights=[self.weight,1-self.weight],k=1)[0]
+
+                        order = Order(self.tid, otype, ostyle, quoteprice, self.orders[0].qty, time, None, -1, subtype)
                         self.lastquote = order
                 return order
 
@@ -407,8 +415,8 @@ class Trader_ZIP(Trader):
         #    so a single trader can both buy AND sell
         #    -- in the original, traders were either buyers OR sellers
 
-        def __init__(self, ttype, tid, balance, time):
-                Trader.__init__(self, ttype, tid, balance, time)
+        def __init__(self, ttype, tid, balance, time, weight=0):
+                Trader.__init__(self, ttype, tid, balance, time, weight)
                 m_fix = 0.05
                 m_var = 0.05
                 self.job = None                                 # this is 'Bid' or 'Ask' depending on customer order
@@ -487,7 +495,14 @@ class Trader_ZIP(Trader):
                         quoteprice = int(self.limit * (1 + self.margin))
                         self.price = quoteprice
 
-                        order = Order(self.tid, self.job, "LIM", quoteprice, self.orders[0].qty, time, None, -1)
+                        # only big block order can be BI or BDN order
+                        subtype = None
+                        big_block = 200
+
+                        if self.orders[0].qty >= big_block:
+                            subtype = random.choices(population=['BI','BDN'],weights=[self.weight,1-self.weight],k=1)[0]
+
+                        order = Order(self.tid, self.job, "LIM", quoteprice, self.orders[0].qty, time, None, -1, subtype)
                         self.lastquote = order
 
                 return order
@@ -504,7 +519,7 @@ class Trader_ZIP(Trader):
                         ptrb_rel = price * (1.0 + (self.cr * random.random()))  # relative shift
                         target = int(round(ptrb_rel + ptrb_abs, 0))
                         if target == price: target = price + 1  # enforce minimal difference
-                        print('TargetUp: %d %d\n' % (price, target))
+                        if verbose: print('TargetUp: %d %d\n' % (price, target))
                         return(target)
 
 
@@ -514,7 +529,7 @@ class Trader_ZIP(Trader):
                         ptrb_rel = price * (1.0 - (self.cr * random.random()))  # relative shift
                         target = int(round(ptrb_rel - ptrb_abs, 0))
                         if target == price : target = price -1 # enforce minimal difference
-                        print('TargetDn: %d %d\n' % (price,target))
+                        if verbose: print('TargetDn: %d %d\n' % (price,target))
                         return(target)
 
 
@@ -523,7 +538,7 @@ class Trader_ZIP(Trader):
                         microweight = 0
                         if microprice != None: shaded = ((microweight * microprice) + ((1 - microweight) * price))
                         else: shaded = price
-                        print('Microshade: micro=%s price=%s shaded=%s' % (microprice, price, shaded))
+                        if verbose: print('Microshade: micro=%s price=%s shaded=%s' % (microprice, price, shaded))
                         return(shaded)
 
 
@@ -553,7 +568,7 @@ class Trader_ZIP(Trader):
                                 sys.stdout.flush()
                                 sys.exit('Fail: ZIP profit_alter given wrong number of parameters')
 
-                        print('profit_alter: price=%s beta=%s momntm=%s' % (price, beta, momntm))
+                        if verbose: print('profit_alter: price=%s beta=%s momntm=%s' % (price, beta, momntm))
                         oldprice = self.price
                         diff = price - oldprice
                         change = ((1.0 - self.momntm) * (self.beta * diff)) + (self.momntm * self.prev_change)
@@ -571,7 +586,7 @@ class Trader_ZIP(Trader):
 
                         # set the price from limit and profit-margin
                         self.price = int(round(self.limit * (1.0 + self.margin), 0))
-                        print('old=%d diff=%d change=%d lim=%d price = %d\n' % (oldprice, diff, change, self.limit, self.price))
+                        if verbose: print('old=%d diff=%d change=%d lim=%d price = %d\n' % (oldprice, diff, change, self.limit, self.price))
 
 
                 if verbose and trade != None: print('respond() [ZIP] time=%s tid=%s, trade=%s LOB[bids]=%s LOB[asks]=%s' %
@@ -580,7 +595,9 @@ class Trader_ZIP(Trader):
 
                 # what, if anything, has happened on the bid LOB?
 
-                if trade != None: print('ZIP respond() trade=%s' % trade)
+                if trade != None:
+                        # print('ZIP respond() trade=%s' % trade)
+                        pass
 
                 bid_improved = False
                 bid_hit = False
@@ -635,7 +652,7 @@ class Trader_ZIP(Trader):
 
                 if lob_best_ask_p != 0:
                         # non-empty ask LOB
-                        
+
                         if self.prev_best_ask_p < lob_best_ask_p: best_ask_p_increased = True
                         else: best_ask_p_increased = False
 
@@ -699,14 +716,14 @@ class Trader_ZIP(Trader):
 
                 target_price = None # default assumption
 
-                print('self.job=%s' % self.job)
+                if verbose: print('self.job=%s' % self.job)
 
                 if self.job == 'Ask':
                         # seller
                         if deal:
                                 if verbose: print ('trade',trade)
                                 tradeprice = trade['price']  # price of most recent transaction
-                                print('tradeprice=%s lob[microprice]=%s' % (tradeprice, lob['microprice']))
+                                # print('tradeprice=%s lob[microprice]=%s' % (tradeprice, lob['microprice']))
                                 shadetrade = microshade(lob['microprice'], tradeprice)
                                 refprice = shadetrade
 
@@ -722,7 +739,7 @@ class Trader_ZIP(Trader):
                                         profit_alter(target_price)
                         else:
                                 # no deal: aim for a target price higher than best bid
-                                print('lob_best_bid_p=%s lob[microprice]=%s' % (lob_best_bid_p, lob['microprice']))
+                                # print('lob_best_bid_p=%s lob[microprice]=%s' % (lob_best_bid_p, lob['microprice']))
                                 refprice = microshade(lob['microprice'], lob_best_bid_p)
 
                                 if ask_improved and self.price > lob_best_bid_p:
@@ -731,12 +748,12 @@ class Trader_ZIP(Trader):
                                         else:
                                                 if self.worst_askprice != None:
                                                         target_price = self.worst_askprice
-                                                        print('worst_askprice = %s' % self.worst_askprice)
+                                                        if verbose: print('worst_askprice = %s' % self.worst_askprice)
                                                         target_price = None #todo: does this stop the price-spikes?
                                                 else:   target_price = None
                                                         # target_price = lob['asks']['worstp']  # stub quote
                                         if target_price != None:
-                                                print('PA1: tp=%s' % target_price)
+                                                if verbose: print('PA1: tp=%s' % target_price)
                                                 profit_alter(target_price)
 
                 if self.job == 'Bid':
@@ -772,10 +789,10 @@ class Trader_ZIP(Trader):
                                                 else:   target_price = None
                                                         # target_price = lob['bids']['worstp']  # stub quote
                                         if target_price != None:
-                                                print('PA2: tp=%s' % target_price)
+                                                # print('PA2: tp=%s' % target_price)
                                                 profit_alter(target_price)
 
-                print('time,%f,>>>,microprice,%s,>>>,target_price,%s' % (time, lob['microprice'], target_price))
+                if verbose: print('time,%f,>>>,microprice,%s,>>>,target_price,%s' % (time, lob['microprice'], target_price))
 
                 # remember the best LOB data ready for next response
                 self.prev_best_bid_p = lob_best_bid_p
