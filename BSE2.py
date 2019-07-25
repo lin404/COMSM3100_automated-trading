@@ -549,19 +549,6 @@ class Orderbook(Orderbook_half):
                 mprice = ( (bid_p * ask_q) + (ask_p * bid_q) ) / tot_q
         return mprice
 
-    def add_lim_bi_order(self, order, verbose):
-        # add a BI order to the order book in Discovery
-        if verbose: print('>add_lim_order: order.orderid=%d' % (order.orderid))
-        if order.otype == 'Bid':
-                response=self.bids.book_add(order, verbose)
-                # best_price = self.bids.lob_anon[0][0]
-                # self.bids.best_price = best_price
-        else:
-                response=self.asks.book_add(order, verbose)
-                # best_price = self.asks.lob_anon[0][0]
-                # self.asks.best_price = best_price
-        return response
-
     def add_lim_order(self, order, verbose):
         # add a LIM order to the LOB and update records
         if verbose: print('>add_lim_order: order.orderid=%d' % (order.orderid))
@@ -717,7 +704,7 @@ class Orderbook(Orderbook_half):
 # Exchange's internal orderbooks
 class Exchange(Orderbook):
 
-    def __init__(self, eid, discovery):
+    def __init__(self, eid):
         self.eid = eid          # exchange ID string
         self.lit = Orderbook(eid + "Lit")  # traditional lit exchange
         self.drk = Orderbook(eid + "Drk")  # NB just a placeholder -- in this version of BSE the dark pool is undefined
@@ -725,8 +712,6 @@ class Exchange(Orderbook):
         self.trader_recs = {}   # trader records (balances from fees, reputations, etc), indexed by traderID
         self.order_id = 0       # unique ID code for each order received by the exchange, starts at zero
         self.open = False       # is the exchange open (for business) or closed?
-
-        self.discovery = discovery # discovery service
 
     def __str__(self):
         s = '\nExchID: %s ' % (self.eid)
@@ -905,32 +890,7 @@ class Exchange(Orderbook):
             if verbose: print('Process_order: qty=%d routes to DARK pool' % order.qty)
             pool = self.drk
 
-            # if order.ordersubtype == 'BI':
-            #     if verbose: print(f'order={order.ordersubtype} : qty={order.qty} routes to Discovery Service')
-            #     osrs = self.discovery.match_block_indication(order, verbose)
-
-            #     # No match found. Add order to orderbook
-            #     if len(osrs) == 0:
-            #         self.discovery.add_lim_bi_order(order, verbose)
-            #         return {'tape_summary':None, 'trader_msgs':None}
-            #     else:
-            #         # TODO Return OSR? Next order is QBO?
-            #         # TODO Get QBO -> should it be in market_session?
-            #         # TODO Pass it to self.drk and update the reputation score
-            #         pass
-
-            # elif order.ordersubtype == 'BDN':
-            #     # add eligible BDN order to discovery order book
-            #     self.discovery.add_lim_bi_order(order, verbose)
-
-            #     if verbose: print('Process_order: qty=%d routes to DARK pool' % order.qty)
-            #     pool = self.drk
-
-            # else:
-
-
         # Cancellations don't generate new order-ids
-
         if ostyle == 'CAN':
             # deleting a single existing order
             # NB this trusts the order.qty -- sends CANcel only to the pool that the QTY indicates
@@ -1146,98 +1106,72 @@ class Exchange(Orderbook):
 
         return public_data
 
-# Discovery Service: match a new or amended BI or eligible BDN
-# TODO This Class should be a inner class in Exchange()?
+# Discovery Service
 class Discovery(Orderbook):
-    # Minimum Indication Value(MIV)
-    # BI must be greater than or equal to MIT threshold to be accepted into Discovery
-    miv = 200
 
-    # Minimum Notification Value (MNV)
-    # BDN must be greater than or equal to MIT threshold to be accepted into Discovery
-    mnv = 200
-
-    # Maximum Indication Value
-    max_price = 400
-
-    def __init__(self, eid=''):
+    def __init__(self, eid=None):
         self.eid = eid
         self.bi = Orderbook(eid + "BI")
+        self.bdn = Orderbook(eid + "BDN")
+        self.order_id = 0
 
     def __str__(self):
         s = f'eid={self.eid}'
         return s
 
-    # TODO what is the price?
-    def check_price_match(self, buyer, seller, price):
-        if buyer.limit_price == None and seller.limit_price == None:
-            return True
-        elif buyer.limit_price != None and seller.limit_price == None:
-            if buyer.limit_price >= price:
-                return True
-        elif buyer.limit_price == None and seller.limit_price != None:
-            if seller.limit_price <= price :
-                return True
-        elif buyer.limit_price != None and seller.limit_price != None:
-            if buyer.limit_price >= price and seller.limit_price <= price:
-                return True
-
-        return False
-
-    def check_size_match(self, buyer, seller):
-        if buyer.MES== seller.MES== None:
-            return True
-        elif buyer.MES != None and seller.MES== None:
-            if seller.quantity >= buyer.MES:
-                return True
-        elif buyer.MES== None and seller.MES != None:
-            if buyer.quantity >= seller.MES:
-                return True
-        elif buyer.MES != None and seller.MES != None:
-            if buyer.quantity >= seller.MES and seller.quantity >= buyer.MES:
-                return True
-
-        return False
-
     # Upon submission, system checks immediately
     # If a match is found then return OSR
-    def match_block_indication(self, order):
+    def match_block_indication(self, order, verbose):
 
-        # The list of OSR
-        osrs = []
+        # TODO what is the price?
+        def check_price_match(buyer, seller, price):
+            if buyer.limit_price == None and seller.limit_price == None:
+                return True
+            elif buyer.limit_price != None and seller.limit_price == None:
+                if buyer.limit_price >= price:
+                    return True
+            elif buyer.limit_price == None and seller.limit_price != None:
+                if seller.limit_price <= price :
+                    return True
+            elif buyer.limit_price != None and seller.limit_price != None:
+                if buyer.limit_price >= price and seller.limit_price <= price:
+                    return True
 
-        buy_sell = {
-            'Bid': [1, self.buy_orders],
-            'Ask': [-1, self.sell_orders],
-        }
+            return False
 
-        # It should never happen
-        if order.otype not in buy_sell:
-            sys.exit('BI order is neither Bid nor Ask')
+        def check_size_match(buyer, seller):
+            if buyer.MES== seller.MES== None:
+                return True
+            elif buyer.MES != None and seller.MES== None:
+                if seller.quantity >= buyer.MES:
+                    return True
+            elif buyer.MES== None and seller.MES != None:
+                if buyer.quantity >= seller.MES:
+                    return True
+            elif buyer.MES != None and seller.MES != None:
+                if buyer.quantity >= seller.MES and seller.quantity >= buyer.MES:
+                    return True
 
-        if order.otype == 'Bid':
-            value = order.quantity * min(order.limit_price, self.lob['bids']['bestp'])
+            return False
 
-        elif order.otype == 'Ask':
-            value = order.quantity * max(order.limit_price, self.lob['asks']['bestp'])
+        if order.ordersubtype == 'BI':
+            book = self.bi
+        elif order.ordersubtype == 'BDN':
+            book = self.bdn
 
-        # The value of BI has to be equal to or greater than the MIV threshold
-        if value >= self.miv and value < self.max_price:
+        # lookup order book
+        buy_sell = { 'Bid':[1, book.asks],'Ask': [-1, book.bids]}
+        orders = buy_sell[order.otype]
+        for oitem in orders[1]:
+            switch = ['#', order, oitem]
+            buyer = switch[orders[0]]
+            seller = switch[orders[0]*-1]
 
-            for oitem in buy_sell[order.otype][1]:
-                switch = ['#', order, oitem]
-                buyer = switch[buy_sell[order.otype][0]]
-                seller = switch[buy_sell[order.otype][0]*-1]
+            # find the match
+            if check_price_match(buyer, seller, 400) and check_size_match(buyer, seller):
+                return oitem
 
-                # Lookup the match
-                if self.check_price_match(buyer, seller, 400) and self.check_size_match(buyer, seller):
-
-                    # Create OSRs
-                    osrs.append(self.order_submission_request(order, oitem))
-                    if seller.subtype == "BI":
-                        osrs.append(self.order_submission_request(oitem, order))
-
-        return osrs
+        return None
 
     # Order Submission Request (OSR)
     def order_submission_request(self, self_order, match_order):
@@ -1268,6 +1202,59 @@ class Discovery(Orderbook):
     def update_reputation_score(self, bi_order, qbo_order):
 
         pass
+
+    def process_order(self, time, order, verbose):
+
+        if order.otype == 'Bid':
+            value = order.quantity * min(order.limit_price, self.lob['bids']['bestp'])
+        elif order.otype == 'Ask':
+            value = order.quantity * max(order.limit_price, self.lob['asks']['bestp'])
+        else:
+            sys.exit('BI order is neither Bid nor Ask')
+
+        # BI must be greater than or equal to MIV
+        miv = 200
+        # BDN must be greater than or equal to MNV
+        mnv = 200
+        # Maximum Indication Value
+        max_price = 400
+
+        # filter out ineligible orders
+        if order.ordersubtype == 'BI' and value < miv:
+            return None
+
+        if order.ordersubtype == 'BDN' and value < mnv:
+            return None
+
+        # add order to BI/BDN orderbook
+        if order.ordersubtype == 'BI':
+            book = self.bi
+        elif order.ordersubtype == 'BDN':
+            book = self.bdn
+
+        ostyle = order.ostyle
+        if ostyle == 'CAN':
+            # deleting a single existing order
+            book.process_order_CAN(time, order, verbose)
+            return None
+
+        else:
+            # generate a unique ID to new order
+            order.orderid = self.order_id
+            self.order_id = order.orderid + 1
+
+            # add eligible BDN order to discovery order book
+            book.add_lim_order(order, verbose)
+
+            # find the match order for BI
+            if order.ordersubtype == 'BI':
+                rst = self.match_block_indication(order, verbose)
+
+                # return OSR if match order is found
+                if rst: return self.order_submission_request(order, rst)
+                else: return None
+            else: return None
+
 ##########################---Below lies the experiment/test-rig---##################
 
 
@@ -1628,11 +1615,14 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, sum
 
         # initialise the exchanges
         exchanges = []
+        # initialise the discovery services
+        discovery = []
         for e in range(n_exchanges):
                 eid = "Exch%d" % e
-                discovery = Discovery(eid)
-                exch = Exchange(eid, discovery)
+                exch = Exchange(eid)
+                dis = Discovery(eid)
                 exchanges.append(exch)
+                discovery.append(dis)
                 if verbose: print('Exchange[%d] =%s' % (e, str(exchanges[e])))
 
         # create a bunch of traders
@@ -1745,7 +1735,6 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, sum
             # that is yet to be implemented here
             order = traders[tid].getorder(time, time_left, lobs[0], verbose)
 
-            print(order)
             if verbose: print('Trader Order: %s' % str(order))
 
             if order != None:
@@ -1822,9 +1811,6 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, sum
                 # order resting at the exchange and see if it can now be processed
                 # applies to AON, ICE, OSO, and OCO
 
-
-
-
                 if verbose:
                     print('Exch_Msgs: ')
                     if exch_msgs == None: print('None')
@@ -1837,7 +1823,6 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, sum
                     for msg in exch_msgs:
                         if verbose: print('Message: %s' % msg)
                         traders[msg.tid].bookkeep(msg, time, bookkeep_verbose)
-
 
                 # traders respond to whatever happened
                 # needs to be updated for multiple exchanges
