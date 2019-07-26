@@ -49,6 +49,7 @@ import sys
 import math
 import random
 import csv
+import collections
 from datetime import datetime
 
 from BSE2_msg_classes import Assignment, Order, Exch_msg
@@ -219,6 +220,8 @@ class Orderbook_half:
         # add an order to the master list holding the orders
         if verbose: print('>book_add %s' % (order))
         self.orders[order.orderid] = order
+        sorted_orders = sorted(self.orders.items(), key=lambda x: (x[1].qty, x[1].price, x[1].time))
+        self.orders = collections.OrderedDict(sorted_orders)
         self.n_orders = len(self.orders)
         # reconstruct the LOB -- from scratch (inefficient)
         self.build_lob(verbose)
@@ -1186,6 +1189,7 @@ class Discovery(Orderbook):
         elif order.osubtype == 'BDN':
             book = self.bdn
 
+        matching_list = []
         # lookup order book
         buy_sell = { 'Bid':[1, book.asks],'Ask': [-1, book.bids]}
         orders = buy_sell[order.otype]
@@ -1195,10 +1199,10 @@ class Discovery(Orderbook):
             seller = switch[orders[0]*-1]
 
             # find the match
-            if check_price_match(buyer, seller, 400) and check_size_match(buyer, seller):
-                return oitem
+            if check_price_match(buyer, seller, 400) and check_size_match(buyer, seller) and oitem.osubtype == 'BI':
+                    matching_list.append(oitem)
 
-        return None
+        return matching_list
 
     # Order Submission Request (OSR)
     def order_submission_request(self, self_order, match_order):
@@ -1237,7 +1241,7 @@ class Discovery(Orderbook):
 
         if not trader_id in self.trader_recs:
             # we've not seen this trader before, so create a record for it
-            if verbose: print('t=%f: Exchange %s registering Trader %s:' % (time, self.eid, trader_id))
+            if verbose: print('t=%f: Discovery %s registering Trader %s:' % (time, self.eid, trader_id))
             trader_rec = self.trader_record(time, trader_id)
             self.trader_recs[trader_id] = trader_rec
             if verbose: print('record= %s' % str(trader_rec))
@@ -1305,7 +1309,7 @@ class Discovery(Orderbook):
                         total_fees += msg.fee
                         if verbose: print('Trader %s adding fee %d from msg %s' % (trader_id, msg.fee, msg))
             self.trader_recs[trader_id].balance += total_fees
-            if verbose: print('Trader %s Exch %s: updated balance=%d' % (trader_id, self.eid, self.trader_recs[trader_id].balance))
+            if verbose: print('Trader %s Discovery %s: updated balance=%d' % (trader_id, self.eid, self.trader_recs[trader_id].balance))
 
             # record the tape events on the tape
             if len(tape_events) > 0:
@@ -1313,8 +1317,8 @@ class Discovery(Orderbook):
                     self.tape_update(event, verbose)
 
             if verbose:
-                print('<Exch.Proc.Order(): tape_events=%s' % tape_events)
-                s = '<Exch.Proc.Order(): trader_msgs=['
+                print('<Discovery.Proc.Order(): tape_events=%s' % tape_events)
+                s = '<Discovery.Proc.Order(): trader_msgs=['
                 for msg in trader_msgs:
                     s = s + '[' + str(msg) + '], '
                 s = s + ']'
