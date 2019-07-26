@@ -906,9 +906,6 @@ class Exchange(Orderbook):
             self.consolidate_responses([response_l, response_d])
 
         else:
-            # give each new order a unique ID
-            order.orderid = self.order_id
-            self.order_id = order.orderid + 1
 
             ack_msg = Exch_msg(trader_id, order.orderid, 'ACK', [[order.price, order.qty]], None, 0, 0)
 
@@ -963,9 +960,6 @@ class Exchange(Orderbook):
 
             else:
                 sys.exit('FAIL: process_order given order style %s', ostyle)
-
-
-
 
         if verbose: print ('<Exch.Proc.Order(): Order=%s; Response=%s' % (order, response))
 
@@ -1205,10 +1199,23 @@ class Discovery(Orderbook):
 
     def process_order(self, time, order, verbose):
 
+        otyle = order.osubtype
+
+        if otyle == 'BI':
+            book = self.bi
+        elif otyle == 'BDN':
+            book = self.bdn
+
         if order.otype == 'Bid':
-            value = order.quantity * min(order.limit_price, self.lob['bids']['bestp'])
+            if len(book.bids.lob)>0:
+                value = order.qty * min(order.price, book.bids.lob[0][0])
+            else:
+                value = order.qty * order.price
         elif order.otype == 'Ask':
-            value = order.quantity * max(order.limit_price, self.lob['asks']['bestp'])
+            if len(book.asks.lob)>0:
+                value = order.qty * max(order.price, book.asks.lob[0][0])
+            else:
+                value = order.qty * order.price
         else:
             sys.exit('BI order is neither Bid nor Ask')
 
@@ -1220,40 +1227,31 @@ class Discovery(Orderbook):
         max_price = 400
 
         # filter out ineligible orders
-        if order.ordersubtype == 'BI' and value < miv:
-            return None
+        if otyle == 'BI' and value < miv:
+            return {"TraderMsgs":None, "TapeEvents":None}
 
-        if order.ordersubtype == 'BDN' and value < mnv:
-            return None
+        if otyle == 'BDN' and value < mnv:
+            return {"TraderMsgs":None, "TapeEvents":None}
 
         # add order to BI/BDN orderbook
-        if order.ordersubtype == 'BI':
-            book = self.bi
-        elif order.ordersubtype == 'BDN':
-            book = self.bdn
 
-        ostyle = order.ostyle
-        if ostyle == 'CAN':
+        if order.ostyle == 'CAN':
             # deleting a single existing order
-            book.process_order_CAN(time, order, verbose)
-            return None
+            response = book.process_order_CAN(time, order, verbose)
 
         else:
-            # generate a unique ID to new order
-            order.orderid = self.order_id
-            self.order_id = order.orderid + 1
-
             # add eligible BDN order to discovery order book
             book.add_lim_order(order, verbose)
-
+            response = {'tape_summary':None, 'trader_msgs':None}
             # find the match order for BI
-            if order.ordersubtype == 'BI':
-                rst = self.match_block_indication(order, verbose)
-
+            if otyle == 'BI':
                 # return OSR if match order is found
-                if rst: return self.order_submission_request(order, rst)
-                else: return None
-            else: return None
+                rst = self.match_block_indication(order, verbose)
+                osr = self.order_submission_request(order, rst)
+                response['OSR'] = osr
+
+        return response
+
 
 ##########################---Below lies the experiment/test-rig---##################
 
@@ -1643,6 +1641,8 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, sum
 
         pending_cust_orders = []
 
+        order_id = 0
+
         if verbose: print('\n%s;  ' % (sess_id))
 
         tid = None
@@ -1677,8 +1677,15 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, sum
                         can_order = traders[kill].lastquote
                         can_order.ostyle = "CAN"
                         if verbose: print('can_order: %s' % (can_order))
-                        exch_response = exchanges[0].process_order(time, can_order, process_verbose)
+
+                        if order.osubtype != 'BI':
+                            exch_response = exchanges[0].process_order(time, can_order, process_verbose)
+
+                        if order.osubtype == 'BI' or order.osubtype == 'BDN':
+                            exch_response = discovery[0].process_order(time, can_order, process_verbose)
+
                         exch_msg = exch_response['trader_msgs']
+
                         # do the necessary book-keeping
                         # NB this assumes CAN results in a single message back from the exchange
                         traders[kill].bookkeep(exch_msg[0], time, bookkeep_verbose)
@@ -1738,6 +1745,9 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, sum
             if verbose: print('Trader Order: %s' % str(order))
 
             if order != None:
+                # give each new order a unique ID
+                order.orderid = order_id
+                order_id += 1
 
                 order.myref = traders[tid].orders[0].assignmentid  # attach customer order ID to this exchange order
                 if verbose: print('Order with myref=%s' % order.myref)
@@ -1761,7 +1771,12 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, sum
                     if verbose: print('> can_order %s' % str(can_order))
 
                     # send cancellation to exchange
-                    exch_response = exchanges[0].process_order(time, can_order, process_verbose)
+                    if order.osubtype != 'BI':
+                        exch_response = exchanges[0].process_order(time, can_order, process_verbose)
+
+                    if order.osubtype == 'BI' or order.osubtype == 'BDN':
+                        exch_response =  discovery[0].process_order(time, can_order, process_verbose)
+
                     exch_msg = exch_response['trader_msgs']
                     tape_sum = exch_response['tape_summary']
 
@@ -1803,7 +1818,12 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, sum
                 if verbose: print('Trader %s quotes[-1]: %s' % (tid, traders[tid].quotes[-1]))
 
                 # send this order to exchange and receive response
-                exch_response = exchanges[0].process_order(time, order, process_verbose)
+                if order.osubtype != 'BI':
+                    exch_response = exchanges[0].process_order(time, order, process_verbose)
+
+                if order.osubtype == 'BI' or order.osubtype == 'BDN':
+                    exch_response = discovery[0].process_order(time, order, process_verbose)
+
                 exch_msgs = exch_response['trader_msgs']
                 tape_sum = exch_response['tape_summary']
 

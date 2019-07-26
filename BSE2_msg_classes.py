@@ -29,7 +29,7 @@ class Assignment:
 # The order-style may require additional parameters which are bundled into style_params (=None if not)
 class Order:
 
-    def __init__(self, trader_id, otype, ostyle, price, qty, time, endtime, orderid, ordersubtype=None):
+    def __init__(self, trader_id, otype, ostyle, price, qty, time, endtime, orderid, osubtype=None):
         self.tid = trader_id    # trader i.d.
         # order type (bid or ask -- what side of LOB is it for)
         self.otype = otype
@@ -45,12 +45,12 @@ class Order:
         self.myref = None
         self.styleparams = None  # style parameters -- initially null, filled in later
 
-        self.ordersubtype = ordersubtype  # order sub type of BI or BDN
+        self.osubtype = osubtype  # order sub type of BI or BDN
 
     def __str__(self):
         return '[%s %s %s P=%03d Q=%s T=%5.2f OID:%d Params=%s MyRef=%s SubType=%s]' % \
                (self.tid, self.otype, self.ostyle, self.price, self.qty,
-                self.time, self.orderid, str(self.styleparams), self.myref, self.ordersubtype)
+                self.time, self.orderid, str(self.styleparams), self.myref, self.osubtype)
 
 
 # structure of the messages that the exchange sends back to the traders after processing an order
