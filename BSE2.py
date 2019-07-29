@@ -865,16 +865,16 @@ class Orderbook(Orderbook_half):
     def process_order_BI(self, time, order, verbose):
         response = None
         oprice = order.price
-        if order.osubtype == 'BI':
-            if order.otype == 'Bid' and len(self.asks.lob) > 0 and oprice >= self.asks.lob[0][0]:
-                order.ostyle = 'IOC'
-                response = self.asks.book_take_BI(time, order, self.idstr, verbose)
-            elif order.otype == 'Ask' and len(self.bids.lob) > 0 and oprice <= self.bids.lob[0][0]:
-                order.ostyle = 'IOC'
-                response = self.bids.book_take_BI(time, order, self.idstr, verbose)
+        # if order.osubtype == 'BI':
+        #     if order.otype == 'Bid' and len(self.asks.lob) > 0 and oprice >= self.asks.lob[0][0]:
+        #         order.ostyle = 'IOC'
+        #         response = self.asks.book_take_BI(time, order, self.idstr, verbose)
+        #     elif order.otype == 'Ask' and len(self.bids.lob) > 0 and oprice <= self.bids.lob[0][0]:
+        #         order.ostyle = 'IOC'
+        #         response = self.bids.book_take_BI(time, order, self.idstr, verbose)
 
-        if response == None or len(response['OSRs'])==0:
-            response = self.add_lim_order(order, verbose)
+        # if response == None or len(response['OSRs'])==0:
+        response = self.add_lim_order(order, verbose)
 
         return response
 
@@ -1940,11 +1940,11 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, sum
                         can_order.ostyle = "CAN"
                         if verbose: print('can_order: %s' % (can_order))
 
-                        # if can_order.osubtype != 'BI':
-                        exch_response = exchanges[0].process_order(time, can_order, process_verbose)
+                        if can_order.osubtype == 'BI' or can_order.osubtype == 'BDN':
+                            exch_response = discovery[0].process_order(time, can_order, process_verbose)
 
-                        # if can_order.osubtype == 'BI' or can_order.osubtype == 'BDN':
-                        #     exch_response = discovery[0].process_order(time, can_order, process_verbose)
+                        if can_order.osubtype != 'BI':
+                            exch_response = exchanges[0].process_order(time, can_order, process_verbose)
 
                         exch_msg = exch_response['trader_msgs']
 
@@ -2043,11 +2043,11 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, sum
                     if verbose: print('> can_order %s' % str(can_order))
 
                     # send cancellation to exchange
-                    # if can_order.osubtype != 'BI':
-                    exch_response = exchanges[0].process_order(time, can_order, process_verbose)
+                    if can_order.osubtype == 'BI' or can_order.osubtype == 'BDN':
+                        exch_response = discovery[0].process_order(time, can_order, process_verbose)
 
-                    # if can_order.osubtype == 'BI' or can_order.osubtype == 'BDN':
-                    #     exch_response = discovery[0].process_order(time, can_order, process_verbose)
+                    if can_order.osubtype != 'BI':
+                        exch_response = exchanges[0].process_order(time, can_order, process_verbose)
 
                     exch_msg = exch_response['trader_msgs']
                     tape_sum = exch_response['tape_summary']
@@ -2094,11 +2094,11 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, sum
                 if verbose: print('Trader %s quotes[-1]: %s' % (tid, traders[tid].quotes[-1]))
 
                 # send this order to exchange and receive response
-                # if order.osubtype != 'BI':
-                exch_response = exchanges[0].process_order(time, order, process_verbose)
+                if order.osubtype == 'BI' or order.osubtype == 'BDN':
+                    exch_response = discovery[0].process_order(time, order, process_verbose)
 
-                # if order.osubtype == 'BI' or order.osubtype == 'BDN':
-                #     exch_response = discovery[0].process_order(time, order, process_verbose)
+                if order.osubtype != 'BI':
+                    exch_response = exchanges[0].process_order(time, order, process_verbose)
 
                 exch_msgs = exch_response['trader_msgs']
                 tape_sum = exch_response['tape_summary']
