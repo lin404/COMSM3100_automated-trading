@@ -359,7 +359,7 @@ class Trader_ISHV(Trader):
                         big_block = 200
 
                         if self.orders[0].qty >= big_block:
-                            subtype = random.choices(population=['BI','BDN'],weights=[self.weight,1-self.weight],k=1)[0]
+                            subtype = random.choices(population=['BI','BDN', None],weights=[self.weight,1-self.weight, 0.5],k=1)[0]
 
                         order = Order(self.tid, otype, ostyle, quoteprice, self.orders[0].qty, time, None, -1, subtype)
                         self.lastquote = order
