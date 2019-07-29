@@ -220,8 +220,6 @@ class Orderbook_half:
         # add an order to the master list holding the orders
         if verbose: print('>book_add %s' % (order))
         self.orders[order.orderid] = order
-        sorted_orders = sorted(self.orders.items(), key=lambda x: (x[1].qty, x[1].price, x[1].time))
-        self.orders = collections.OrderedDict(sorted_orders)
         self.n_orders = len(self.orders)
         # reconstruct the LOB -- from scratch (inefficient)
         self.build_lob(verbose)
@@ -264,6 +262,31 @@ class Orderbook_half:
             sys.exit('Fail: book_CAN() attempts to delete nonexistent order ')
 
 
+    def add_msg(self, msglist, tid, oid, etype, transactions, rev_order, fee, verbose):
+        # add_msg(): add a message to list of messages from exchange back to traders
+        # each msg tells trader [tid] that [OID] resulted in an event-type from [PART|FILL|FAIL]
+        # if PART then also sends back [revised order] -- telling the trader what the LOB retains as the unfilled portion
+        # if FILL then [revised order] is None
+        # message concludes with bank-balance details: exchange fee & trader's balance at exchange
+        msg = Exch_msg(tid, oid, etype, transactions, rev_order, fee, 0)
+        msglist.append(msg)
+        if verbose: print(msg)
+
+
+    def add_tapeitem(self, eventlist, pool_id, eventtype, time, price, qty, party_from, party_to, verbose):
+        # add_tapeitem(): add an event to list of events that will be written to tape
+        # event type within book_take should be 'Trade'
+        tape_event = { 'pool_id': pool_id,
+                        'type': eventtype,
+                        'time': time,
+                        'price': price,
+                        'qty': qty,
+                        'party1': party_from,
+                        'party2': party_to}
+        eventlist.append(tape_event)
+        if verbose: print('add_tapeitem() tape_event=%s' % tape_event)
+
+
     def book_take(self, time, order, pool_id, verbose):
         # process the order by taking orders off the LOB, consuming liquidity at the top of the book
         # this is where (MKT, IOC, FOK, AON) orders get matched and execute
@@ -273,32 +296,6 @@ class Orderbook_half:
         # IOC executes as much as it can of the specified quantity; allows partial fill: unfilled portion of order is cancelled
         # AON is like FOK but rests at the exchange until either (a) it can do complete fill or (b) clock reaches specified expiry time, at which point order cancelled.
         # NB the cancellations are not written to the tape, because they do not take liquidity away from the LOB
-
-
-        def add_msg(msglist, tid, oid, etype, transactions, rev_order, fee, verbose):
-            # add_msg(): add a message to list of messages from exchange back to traders
-            # each msg tells trader [tid] that [OID] resulted in an event-type from [PART|FILL|FAIL]
-            # if PART then also sends back [revised order] -- telling the trader what the LOB retains as the unfilled portion
-            # if FILL then [revised order] is None
-            # message concludes with bank-balance details: exchange fee & trader's balance at exchange
-            msg = Exch_msg(tid, oid, etype, transactions, rev_order, fee, 0)
-            msglist.append(msg)
-            if verbose: print(msg)
-
-
-        def add_tapeitem(eventlist, pool_id, eventtype, time, price, qty, party_from, party_to, verbose):
-            # add_tapeitem(): add an event to list of events that will be written to tape
-            # event type within book_take should be 'Trade'
-            tape_event = { 'pool_id': pool_id,
-                            'type': eventtype,
-                            'time': time,
-                            'price': price,
-                            'qty': qty,
-                            'party1': party_from,
-                            'party2': party_to}
-            eventlist.append(tape_event)
-            if verbose: print('add_tapeitem() tape_event=%s' % tape_event)
-
 
         msg_list = []           # details of orders consumed from the LOB when filling this order
         trnsctns = []           # details of transactions resulting from this incoming order walking the book
@@ -313,7 +310,7 @@ class Orderbook_half:
 
         if len(self.lob) == 0:
             # no point going any further; LOB is empty
-            add_msg(msg_list, order.tid, order.orderid, "FAIL", [], None, fee, verbose)
+            self.add_msg(msg_list, order.tid, order.orderid, "FAIL", [], None, fee, verbose)
             return {"TraderMsgs": msg_list, "TapeEvents": tape_events}
 
         # how deep is the book? (i.e. what is cumulative qty available) at this order's indicated price level?
@@ -329,14 +326,14 @@ class Orderbook_half:
             # so we first check that this order can in principle be filled: is there enough liquidity available?
             if depth < order.qty:
                 # there is not enough depth at prices that allow this order to completely fill
-                add_msg(msg_list, order.tid, order.oid, "FAIL", [], None, fee, verbose)
+                self.add_msg(msg_list, order.tid, order.oid, "FAIL", [], None, fee, verbose)
                 # NB here book_take() sends a msg back that an AON order is FAIL, that needs to be picked up by the
                 # exchange logic and not passed back to the trader concerned, unless the AON has actually timed out
                 return {"TraderMsgs": msg_list, "TapeEvents": tape_events}
 
         if order.ostyle == "IOC" and depth < 1 :
             # IOC order is a FAIL because there is no depth at all for the indicated price
-            add_msg(msg_list, order.tid, order.orderid, "FAIL", [], None, fee, verbose)
+            self.add_msg(msg_list, order.tid, order.orderid, "FAIL", [], None, fee, verbose)
             return {"TraderMsgs": msg_list, "TapeEvents": tape_events}
 
 
@@ -415,10 +412,10 @@ class Orderbook_half:
                 trnsctns.append(transaction)
 
                 # add a message to the list of outgoing messages from exch to traders
-                add_msg(msg_list, order.tid, order.orderid, "FILL", trnsctns, None, fee, verbose)
+                self.add_msg(msg_list, order.tid, order.orderid, "FILL", trnsctns, None, fee, verbose)
 
                 # add a record of this to the tape (NB this identifies both parties to the trade, so only do it once)
-                add_tapeitem(tape_events, pool_id, 'Trade', time, price, qty, tid_from, tid_to, verbose)
+                self.add_tapeitem(tape_events, pool_id, 'Trade', time, price, qty, tid_from, tid_to, verbose)
 
                 # so far have dealt with effect of match on incoming order
                 # now need to deal with effect of match on best order on LOB (the other side of the deal)
@@ -429,14 +426,14 @@ class Orderbook_half:
                     self.lob[0][1] = best_lob_orders
                     self.orders[best_lob_order_oid].qty = best_lob_order_qty
                     # The LOB order it matched against is only a partial fill
-                    add_msg(msg_list, best_lob_order_tid, best_lob_order_oid, "PART", [transaction], self.orders[best_lob_order_oid], fee, verbose)
+                    self.add_msg(msg_list, best_lob_order_tid, best_lob_order_oid, "PART", [transaction], self.orders[best_lob_order_oid], fee, verbose)
                     # add_tapeitem(tape_events, 'Trade', time, price, qty, tid_from, tid_to, verbose)
                 else:
                     # the best LOB order is fully consumed: delete it from LOB
                     del(best_lob_orders[0])
                     del(self.orders[best_lob_order_oid])
                     # The LOB order it matched against also complete
-                    add_msg(msg_list, best_lob_order_tid, best_lob_order_oid, "FILL", [transaction], None, fee, verbose)
+                    self.add_msg(msg_list, best_lob_order_tid, best_lob_order_oid, "FILL", [transaction], None, fee, verbose)
                     # add_tapeitem(tape_events, 'Trade', time, price, qty, tid_from, tid_to, verbose)
                     # check: are there other remaining orders at this price?
                     if len(best_lob_orders) > 0:
@@ -456,10 +453,10 @@ class Orderbook_half:
                 trnsctns.append(transaction)
 
                 # add a message to the list of outgoing messages from exch to traders
-                add_msg(msg_list, best_lob_order_tid, best_lob_order_oid, "FILL", [transaction], None, fee, verbose)
+                self.add_msg(msg_list, best_lob_order_tid, best_lob_order_oid, "FILL", [transaction], None, fee, verbose)
 
                 # add a record of this to the tape (NB this identifies both parties to the trade, so only do it once)
-                add_tapeitem(tape_events, pool_id, 'Trade', time, price, qty, tid_from, tid_to, verbose)
+                self.add_tapeitem(tape_events, pool_id, 'Trade', time, price, qty, tid_from, tid_to, verbose)
 
                 # the best LOB order is fully consumed: delete it from LOB and from order-list
                 del(self.orders[best_lob_order_oid])
@@ -486,11 +483,11 @@ class Orderbook_half:
         if qty_remaining > 0 :
             if qty_remaining == order.qty:
                 # this order is wholly unfilled: that's a FAIL (how did this get past the initial checks?)
-                add_msg(msg_list, order.tid, order.orderid, "FAIL", [], None, fee, verbose)
+                self.add_msg(msg_list, order.tid, order.orderid, "FAIL", [], None, fee, verbose)
             else:
                 # this liquidity-taking order only partially filled but ran out of usable LOB
                 order.qty = qty_remaining #revise the order quantity
-                add_msg(msg_list, order.tid, order.orderid, "PART", trnsctns, order, fee, verbose)
+                self.add_msg(msg_list, order.tid, order.orderid, "PART", trnsctns, order, fee, verbose)
                 # add_tapeitem(tape_events, 'Trade', time, price, qty, tid_from, tid_to, verbose)
 
         if verbose:
@@ -505,6 +502,235 @@ class Orderbook_half:
 
         return {"TraderMsgs":msg_list, "TapeEvents":tape_events}
 
+    def book_take_BI(self, time, order, pool_id, verbose):
+        # process the order by taking orders off the LOB, consuming liquidity at the top of the book
+        # this is where (MKT, IOC, FOK, AON) orders get matched and execute
+        # returns messages re transactions, to be sent to traders involved; and a list of events to write to the tape
+        # MKT order consumes the specified quantity, if available: partial fills allowed; ignores the price (so watch out for loss-making trades)
+        # FOK only completes if it can consume the specified quantity at prices equal to or better than the specified price
+        # IOC executes as much as it can of the specified quantity; allows partial fill: unfilled portion of order is cancelled
+        # AON is like FOK but rests at the exchange until either (a) it can do complete fill or (b) clock reaches specified expiry time, at which point order cancelled.
+        # NB the cancellations are not written to the tape, because they do not take liquidity away from the LOB
+
+        def add_matched_info(matchlist, eventtype, time, price, qty, oid_from, oid_to, verbose):
+            match_order = {'type': eventtype,
+                        'time': time,
+                        'price': price,
+                        'qty': qty,
+                        'order1': oid_from,
+                        'order2': oid_to}
+            matchlist.add(match_order)
+
+        msg_list = []           # details of orders consumed from the LOB when filling this order
+        trnsctns = []           # details of transactions resulting from this incoming order walking the book
+        tape_events = []        # details of transaction events to be written onto tape
+        qty_filled = 0          # how much of this order have we filled so far?
+        fee = 0                 # exchange fee charged for processing this order (taking liquidity, wrt maker-taker)
+
+        match_orders = []
+
+        if verbose: print('>book_take(): order=%s, lob=%s' % (order, self.lob))
+
+        # initial checks, return FAIL if there is simply no hope of executing this order
+        if len(self.lob) == 0:
+            # no point going any further; LOB is empty
+            self.add_msg(msg_list, order.tid, order.orderid, "FAIL", [], None, fee, verbose)
+            return {"TraderMsgs": msg_list, "TapeEvents": tape_events, 'OSRs': match_orders}
+
+        # how deep is the book? (i.e. what is cumulative qty available) at this order's indicated price level?
+        depth = 0
+        for level in self.lob_anon:
+            if self.equaltoorbetterthan(level[0], order.price, verbose):
+                depth += level[1]
+            else:  # we're past the level in the LOB where the prices are good for this order
+                break
+
+        if order.ostyle == "FOK" or order.ostyle == "AON":
+            # FOK and AON require a complete fill
+            # so we first check that this order can in principle be filled: is there enough liquidity available?
+            if depth < order.qty:
+                # there is not enough depth at prices that allow this order to completely fill
+                self.add_msg(msg_list, order.tid, order.oid, "FAIL", [], None, fee, verbose)
+                # NB here book_take() sends a msg back that an AON order is FAIL, that needs to be picked up by the
+                # exchange logic and not passed back to the trader concerned, unless the AON has actually timed out
+                return {"TraderMsgs": msg_list, "TapeEvents": tape_events}
+
+        if order.ostyle == "IOC" and depth < 1 :
+            # IOC order is a FAIL because there is no depth at all for the indicated price
+            self.add_msg(msg_list, order.tid, order.orderid, "FAIL", [], None, fee, verbose)
+            return {"TraderMsgs": msg_list, "TapeEvents": tape_events}
+
+        # we only get this far if...
+        # LOB is not empty
+        # order is FOK or AON (complete fill only) --  we know there's enough depth to complete
+        # order is MKT (allows partial fill, ignores prices, stops when indicated quantity is reached or LOB is empty)
+        # order is IOC (allows partial fill, aims for indicated quantity but stops when price-limit is reached or LOB is empty) and LOB depth at price > 0
+
+        if order.otype == "Bid":
+            tid_to = order.tid
+            oid_to = order.orderid
+        elif order.otype == "Ask":
+            tid_from = order.tid
+            oid_from = order.orderid
+        else: # this shouldn't happen
+            sys.exit('>book_take: order.otype=%s in book_take' % order.otype)
+
+        # make a copy of the order-list and lobs as it initially stands
+        # used for reconciling fills and when order is abandoned because it can't complete (e.g. FOK, AON)
+        # initial_orders = self.orders
+
+        # work this order by "walking the book"
+
+        qty_remaining = order.qty
+
+        best_lob_price = self.lob[0][0]
+
+        good_price = True
+
+        if order.ostyle != "MKT":
+            good_price = self.equaltoorbetterthan(best_lob_price, order.price, verbose)
+
+        # this while loop consumes the top of the LOB while trying to fill the order
+        while good_price and (qty_remaining > 0) and (len(self.orders)>0):
+
+            good_price = self.equaltoorbetterthan(self.lob[0][0], order.price, verbose)
+
+            if verbose:
+                print('BK_TAKE: qty_rem=%d; lob=%s; good_price=%s' % (qty_remaining, str(self.lob), good_price))
+                sys.stdout.flush()
+
+            if order.ostyle == "IOC" and (not good_price):
+                # current LOB best price is unacceptable for IOC
+                if verbose: print(
+                                'BK_TAKE: IOC breaks out of while loop (otype=%s best LOB price = %d; order price = %d)' %
+                                (order.otype, self.lob[0][0], order.price))
+                break  # out of the while loop
+
+            best_lob_price = self.lob[0][0]
+            best_lob_orders = self.lob[0][1]
+            best_lob_order = best_lob_orders[0]
+            best_lob_order_qty = best_lob_order[1]
+            best_lob_order_tid = best_lob_order[2]
+            best_lob_order_oid = best_lob_order[3]
+            # best_lob_order_osubtype =
+            if order.otype == "Bid":
+                tid_from = best_lob_order_tid
+                oid_from = best_lob_order_oid
+            elif order.otype == "Ask":
+                tid_to = best_lob_order_tid
+                oid_to = best_lob_order_oid
+
+            if verbose: print('BK_TAKE: best_lob _price=%d _order=%s qty=%d oid_from=%d oid_to=%d tid_from=%s tid_to=%s\n' %
+                                (best_lob_price, best_lob_order, best_lob_order_qty, oid_from, oid_to, tid_from, tid_to))
+
+            # walk the book: does this order consume current best order on book?
+            if best_lob_order_qty >= qty_remaining:
+
+                # incoming liquidity-taking order is completely filled by consuming some/all of best order on LOB
+                qty = qty_remaining
+                price = best_lob_price
+                qty_filled = qty_filled + qty
+                best_lob_order_qty = best_lob_order_qty - qty
+                # the incoming order is a complete fill
+                transaction = {"Price":price, "Qty":qty}
+                trnsctns.append(transaction)
+
+                # add a message to the list of outgoing messages from exch to traders
+                self.add_msg(msg_list, order.tid, order.orderid, "FILL", trnsctns, None, fee, verbose)
+
+                # add a record of this to the tape (NB this identifies both parties to the trade, so only do it once)
+                self.add_tapeitem(tape_events, pool_id, 'Trade', time, price, qty, tid_from, tid_to, verbose)
+
+                # add this to the matching list
+                add_matched_info(match_orders, 'Match', time, price, qty, oid_from, oid_to, verbose)
+
+                # so far have dealt with effect of match on incoming order
+                # now need to deal with effect of match on best order on LOB (the other side of the deal)
+                if best_lob_order_qty > 0:
+                    # the best LOB order is only partially consumed
+                    best_lob_order[1] = best_lob_order_qty
+                    best_lob_orders[0] = best_lob_order
+                    self.lob[0][1] = best_lob_orders
+                    self.orders[best_lob_order_oid].qty = best_lob_order_qty
+                    # The LOB order it matched against is only a partial fill
+                    self.add_msg(msg_list, best_lob_order_tid, best_lob_order_oid, "PART", [transaction], self.orders[best_lob_order_oid], fee, verbose)
+                    # add_tapeitem(tape_events, 'Trade', time, price, qty, tid_from, tid_to, verbose)
+                else:
+                    # the best LOB order is fully consumed: delete it from LOB
+                    del(best_lob_orders[0])
+                    del(self.orders[best_lob_order_oid])
+                    # The LOB order it matched against also complete
+                    self.add_msg(msg_list, best_lob_order_tid, best_lob_order_oid, "FILL", [transaction], None, fee, verbose)
+                    # add_tapeitem(tape_events, 'Trade', time, price, qty, tid_from, tid_to, verbose)
+                    # check: are there other remaining orders at this price?
+                    if len(best_lob_orders) > 0:
+                        # yes
+                        self.lob[0][1] = best_lob_orders
+                    else:
+                        # no
+                        del (self.lob[0])  # consumed the last order on the LOB at this price
+                qty_remaining = 0  # liquidity-taking all done
+            else:
+                # order is only partially filled by current best order, but current best LOB order is fully filled
+                # consume all the current best and repeat
+                qty = best_lob_order_qty
+                price = best_lob_price
+                qty_filled = qty_filled + qty
+                transaction = {"Price": price, "Qty": qty}
+                trnsctns.append(transaction)
+
+                # add a message to the list of outgoing messages from exch to traders
+                self.add_msg(msg_list, best_lob_order_tid, best_lob_order_oid, "FILL", [transaction], None, fee, verbose)
+
+                # add a record of this to the tape (NB this identifies both parties to the trade, so only do it once)
+                self.add_tapeitem(tape_events, pool_id, 'Trade', time, price, qty, tid_from, tid_to, verbose)
+
+                # add this to the matching list
+                add_matched_info(match_orders, 'Match', time, price, qty, oid_from, oid_to, verbose)
+
+                # the best LOB order is fully consumed: delete it from LOB and from order-list
+                del(self.orders[best_lob_order_oid])
+                del(best_lob_orders[0])
+
+                # check: are there other remaining orders at this price?
+                if len(best_lob_orders) > 0:
+                    # yes
+                    self.lob[0][1] = best_lob_orders
+                else:
+                    # no
+                    del (self.lob[0])  # consumed the last order on the LOB at this price
+
+                qty_remaining = qty_remaining - qty
+                if verbose: print('New LOB=%s orders=%s' % (str(self.lob), str(self.orders)))
+
+        # main while loop ends here
+
+        # when we get to here either...
+        # the order completely filled by consuming the front of the book (which may have emptied the whole book)
+        # or the whole book was consumed (and is now empty) without completely filling the order
+        # or IOC consumed as much of the book's availability at the order's indicated price (good_price = False)
+
+        if qty_remaining > 0 :
+            if qty_remaining == order.qty:
+                # this order is wholly unfilled: that's a FAIL (how did this get past the initial checks?)
+                self.add_msg(msg_list, order.tid, order.orderid, "FAIL", [], None, fee, verbose)
+            else:
+                # this liquidity-taking order only partially filled but ran out of usable LOB
+                order.qty = qty_remaining #revise the order quantity
+                self.add_msg(msg_list, order.tid, order.orderid, "PART", trnsctns, order, fee, verbose)
+                # add_tapeitem(tape_events, 'Trade', time, price, qty, tid_from, tid_to, verbose)
+
+        if verbose:
+            print('<Orderbook_Half.book_take() TapeEvents=%s' % tape_events)
+            print('<Orderbook_Half.book_take() TraderMsgs=')
+            for msg in msg_list:
+                print('%s,' % str(msg))
+            print('\n')
+
+        # rebuild the lob to reflect the adjusted order list
+        self.build_lob(verbose)
+
+        return {"TraderMsgs":msg_list, "TapeEvents":tape_events, 'OSRs': match_orders}
 
 
 # Orderbook for a single instrument: list of bids and list of asks and methods to manipulate them
@@ -632,6 +858,22 @@ class Orderbook(Orderbook_half):
                 sys.exit('process_order_take() given neither Bid nor Ask')
 
         if verbose: print('OB.PO_take %s' % response)
+
+        return response
+
+    def process_order_BI(self, time, order, verbose):
+        response = None
+        oprice = order.price
+        if order.osubtype == 'BI':
+            if order.otype == 'Bid' and len(self.asks.lob) > 0 and oprice >= self.asks.lob[0][0]:
+                order.ostyle = 'IOC'
+                response = self.asks.book_take_BI(time, order, self.idstr, verbose)
+            elif order.otype == 'Ask' and len(self.bids.lob) > 0 and oprice <= self.bids.lob[0][0]:
+                order.ostyle = 'IOC'
+                response = self.bids.book_take_BI(time, order, self.idstr, verbose)
+
+        if response == None or len(response['OSRs'])==0:
+            response = self.add_lim_order(order, verbose)
 
         return response
 
@@ -1109,7 +1351,7 @@ class Discovery(Orderbook):
     def __init__(self, eid=None):
         self.eid = eid
         self.bi = Orderbook(eid + "BI")
-        self.bdn = Orderbook(eid + "BDN")
+        # self.bdn = Orderbook(eid + "BDN")
 
         self.tape = []
         self.trader_recs = {}
@@ -1151,56 +1393,49 @@ class Discovery(Orderbook):
 
     # Upon submission, system checks immediately
     # If a match is found then return OSR
-    def match_block_indication(self, order, verbose):
+    def match_block_indication(self, order, time, verbose):
 
-        # TODO what is the price?
-        def check_price_match(buyer, seller, price):
-            if buyer.limit_price == None and seller.limit_price == None:
+        # TODO what is the mechanism here?
+        def check_price_match(buyer, seller):
+            if buyer.price >= seller.price:
                 return True
-            elif buyer.limit_price != None and seller.limit_price == None:
-                if buyer.limit_price >= price:
-                    return True
-            elif buyer.limit_price == None and seller.limit_price != None:
-                if seller.limit_price <= price :
-                    return True
-            elif buyer.limit_price != None and seller.limit_price != None:
-                if buyer.limit_price >= price and seller.limit_price <= price:
-                    return True
 
             return False
 
+        # TODO what is the mechanism here?
         def check_size_match(buyer, seller):
-            if buyer.MES== seller.MES== None:
+            if buyer.qty >= seller.qty:
                 return True
-            elif buyer.MES != None and seller.MES== None:
-                if seller.quantity >= buyer.MES:
-                    return True
-            elif buyer.MES== None and seller.MES != None:
-                if buyer.quantity >= seller.MES:
-                    return True
-            elif buyer.MES != None and seller.MES != None:
-                if buyer.quantity >= seller.MES and seller.quantity >= buyer.MES:
-                    return True
 
             return False
 
-        if order.osubtype == 'BI':
-            book = self.bi
-        elif order.osubtype == 'BDN':
-            book = self.bdn
+        # if order.osubtype == 'BI':
+        #     book = self.bi
+        # elif order.osubtype == 'BDN':
+        #     book = self.bdn
 
+        book = self.bi
         matching_list = []
-        # lookup order book
-        buy_sell = { 'Bid':[1, book.asks],'Ask': [-1, book.bids]}
-        orders = buy_sell[order.otype]
-        for oitem in orders[1].orders:
-            switch = ['#', order, oitem]
-            buyer = switch[orders[0]]
-            seller = switch[orders[0]*-1]
 
-            # find the match
-            if check_price_match(buyer, seller, 400) and check_size_match(buyer, seller) and oitem.osubtype == 'BI':
+        if order.otype == 'Bid':
+            # seller orders should be high qty but low price first
+            sorted_orders = sorted(book.asks.orders.items(), key=lambda x: (x[1].qty, -x[1].price), reverse=True)
+            orders = collections.OrderedDict(sorted_orders)
+
+            for oitem in orders:
+
+                # find the match
+                if oitem.osubtype == 'BI':
                     matching_list.append(oitem)
+                    del orders[oitem.orderid]
+
+        elif order.otype == 'Ask':
+            # buyer orders should be high qty and high price first
+            sorted_orders = sorted(book.bids.orders.items(), key=lambda x: (x[1].qty, x[1].price), reverse=True)
+            orders = collections.OrderedDict(sorted_orders)
+
+        if len(matching_list)>0:
+            matching_list.append(order)
 
         return matching_list
 
@@ -1236,7 +1471,7 @@ class Discovery(Orderbook):
 
     def process_order(self, time, order, verbose):
 
-        otyle = order.osubtype
+        osubtype = order.osubtype
         trader_id = order.tid
 
         if not trader_id in self.trader_recs:
@@ -1246,10 +1481,11 @@ class Discovery(Orderbook):
             self.trader_recs[trader_id] = trader_rec
             if verbose: print('record= %s' % str(trader_rec))
 
-        if otyle == 'BI':
-            book = self.bi
-        elif otyle == 'BDN':
-            book = self.bdn
+        # if otyle == 'BI':
+        #     book = self.bi
+        # elif otyle == 'BDN':
+        #     book = self.bdn
+        book = self.bi
 
         if order.otype == 'Bid':
             if len(book.bids.lob)>0:
@@ -1272,44 +1508,41 @@ class Discovery(Orderbook):
         max_price = 400
 
         # filter out ineligible orders
-        if otyle == 'BI' and value < miv:
+        if osubtype == 'BI' and value < miv:
             response = None
 
-        if otyle == 'BDN' and value < mnv:
+        if osubtype == 'BDN' and value < mnv:
             response = None
 
         # add order to BI/BDN orderbook
-
         if order.ostyle == 'CAN':
             # deleting a single existing order
             response = book.process_order_CAN(time, order, verbose)
-
         else:
-            # add eligible BDN order to discovery order book
-            response = book.add_lim_order(order, verbose)
+            response = book.process_order_BI(time, order, verbose)
 
-            # find the match order for BI
-            if otyle == 'BI':
-                # return OSR if match order is found
-                # rst = self.match_block_indication(order, verbose)
-                # osr = self.order_submission_request(order, rst)
-                # response['OSR'] = osr
-                pass
+        # default return values
+        trader_msgs = None
+        tape_events = None
+        reqs = []
 
+        # set up response messages as same as process_order() in Exchange()
         if response != None:
             # non-null response should be dictionary with two items: list of trader messages and list of tape events
             if verbose: print('Response ---- ')
             trader_msgs = response["TraderMsgs"]
             tape_events = response["TapeEvents"]
 
-            total_fees = 0
-            # trader messages include details of fees charged by exchange for processing this order
-            for msg in trader_msgs:
-                    if msg.tid == trader_id:
-                        total_fees += msg.fee
-                        if verbose: print('Trader %s adding fee %d from msg %s' % (trader_id, msg.fee, msg))
-            self.trader_recs[trader_id].balance += total_fees
-            if verbose: print('Trader %s Discovery %s: updated balance=%d' % (trader_id, self.eid, self.trader_recs[trader_id].balance))
+            if 'OSRs' in response: reqs = response['OSRs']
+
+            # total_fees = 0
+            # # trader messages include details of fees charged by exchange for processing this order
+            # for msg in trader_msgs:
+            #         if msg.tid == trader_id:
+            #             total_fees += msg.fee
+            #             if verbose: print('Trader %s adding fee %d from msg %s' % (trader_id, msg.fee, msg))
+            # self.trader_recs[trader_id].balance += total_fees
+            # if verbose: print('Trader %s Discovery %s: updated balance=%d' % (trader_id, self.eid, self.trader_recs[trader_id].balance))
 
             # record the tape events on the tape
             if len(tape_events) > 0:
@@ -1344,7 +1577,7 @@ class Discovery(Orderbook):
                                     'party2': None,
                                     'qty': total_qty}
 
-            return {'tape_summary':tape_summary, 'trader_msgs':trader_msgs}
+            return {'tape_summary':tape_summary, 'trader_msgs':trader_msgs, 'reqs':reqs}
         else: return {'tape_summary':None, 'trader_msgs':None}
 
 
@@ -1776,7 +2009,7 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, sum
                         if can_order.osubtype != 'BI':
                             exch_response = exchanges[0].process_order(time, can_order, process_verbose)
 
-                        if can_order.osubtype == 'BI' or order.osubtype == 'BDN':
+                        if can_order.osubtype == 'BI' or can_order.osubtype == 'BDN':
                             exch_response = discovery[0].process_order(time, can_order, process_verbose)
 
                         exch_msg = exch_response['trader_msgs']
@@ -1869,8 +2102,8 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, sum
                     if can_order.osubtype != 'BI':
                         exch_response = exchanges[0].process_order(time, can_order, process_verbose)
 
-                    if can_order.osubtype == 'BI' or order.osubtype == 'BDN':
-                        exch_response =  discovery[0].process_order(time, can_order, process_verbose)
+                    if can_order.osubtype == 'BI' or can_order.osubtype == 'BDN':
+                        exch_response = discovery[0].process_order(time, can_order, process_verbose)
 
                     exch_msg = exch_response['trader_msgs']
                     tape_sum = exch_response['tape_summary']
@@ -1921,6 +2154,8 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, sum
 
                 exch_msgs = exch_response['trader_msgs']
                 tape_sum = exch_response['tape_summary']
+
+
 
                 # because the order just processed might have changed things, now go through each
                 # order resting at the exchange and see if it can now be processed
