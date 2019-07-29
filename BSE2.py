@@ -513,13 +513,14 @@ class Orderbook_half:
         # NB the cancellations are not written to the tape, because they do not take liquidity away from the LOB
 
         def add_matched_info(matchlist, eventtype, time, price, qty, oid_from, oid_to, verbose):
-            match_order = {'type': eventtype,
-                        'time': time,
-                        'price': price,
-                        'qty': qty,
-                        'order1': oid_from,
-                        'order2': oid_to}
-            matchlist.add(match_order)
+            info = {'time': time,
+                    'price': price,
+                    'qty': qty}
+            matched_order = {}
+            matched_order[oid_from] = info
+            matchlist.append(matched_order)
+            matched_order[oid_to] = info
+            matchlist.append(matched_order)
 
         msg_list = []           # details of orders consumed from the LOB when filling this order
         trnsctns = []           # details of transactions resulting from this incoming order walking the book
@@ -1128,12 +1129,14 @@ class Exchange(Orderbook):
 
 
         # which pool does it get sent to: Lit or Dark?
-        if order.qty < block_size:
+        if order.qty < block_size and 'Drk' not in order.market:
             if verbose: print('Process_order: qty=%d routes to LIT pool' % order.qty)
             pool = self.lit
+            order.market = self.eid + 'Lit'
         else:
             if verbose: print('Process_order: qty=%d routes to DARK pool' % order.qty)
             pool = self.drk
+            order.market = self.eid + 'Drk'
 
         # Cancellations don't generate new order-ids
         if ostyle == 'CAN':
@@ -1353,6 +1356,9 @@ class Discovery(Orderbook):
         self.bi = Orderbook(eid + "BI")
         # self.bdn = Orderbook(eid + "BDN")
 
+        # record the osrs for updating reputation scores
+        self.osrs = []
+
         self.tape = []
         self.trader_recs = {}
 
@@ -1384,88 +1390,12 @@ class Discovery(Orderbook):
 
         if tr['type'] == 'Trade':
                 # process the trade
-                if verbose: print('>>>>>>>>TRADE t=%5.3f $%d Q%d %s %s\n' %
-                                  (tr['time'], tr['price'], tr['qty'], tr['party1'], tr['party2']))
                 self.last_trans_t = tr['time']  # time of last transaction
                 self.last_trans_p = tr['price']  # price of last transaction
                 self.last_trans_q = tr['qty']  # quantity of last transaction
                 return tr
 
-    # Upon submission, system checks immediately
-    # If a match is found then return OSR
-    def match_block_indication(self, order, time, verbose):
-
-        # TODO what is the mechanism here?
-        def check_price_match(buyer, seller):
-            if buyer.price >= seller.price:
-                return True
-
-            return False
-
-        # TODO what is the mechanism here?
-        def check_size_match(buyer, seller):
-            if buyer.qty >= seller.qty:
-                return True
-
-            return False
-
-        # if order.osubtype == 'BI':
-        #     book = self.bi
-        # elif order.osubtype == 'BDN':
-        #     book = self.bdn
-
-        book = self.bi
-        matching_list = []
-
-        if order.otype == 'Bid':
-            # seller orders should be high qty but low price first
-            sorted_orders = sorted(book.asks.orders.items(), key=lambda x: (x[1].qty, -x[1].price), reverse=True)
-            orders = collections.OrderedDict(sorted_orders)
-
-            for oitem in orders:
-
-                # find the match
-                if oitem.osubtype == 'BI':
-                    matching_list.append(oitem)
-                    del orders[oitem.orderid]
-
-        elif order.otype == 'Ask':
-            # buyer orders should be high qty and high price first
-            sorted_orders = sorted(book.bids.orders.items(), key=lambda x: (x[1].qty, x[1].price), reverse=True)
-            orders = collections.OrderedDict(sorted_orders)
-
-        if len(matching_list)>0:
-            matching_list.append(order)
-
-        return matching_list
-
-    # Order Submission Request (OSR)
-    def order_submission_request(self, self_order, match_order):
-        osr = {
-                'execType': 'L',   # Execution Type = L (Triggered)
-                'ordStatus': 0,    # Order Status = 0 (New)
-                'clOrdID': '',     # Client Order ID specified by Participant
-                'orderID': '',     # Order ID (This is the same OrderID stamped on BI ack Execution Report, which needs to be sent back in the ClOrdLinkID field as part of a QBO)
-                'price': 0,        # Limit price of the BI unless the BI was unpriced
-                'lastPx': 0,       # Executed Price – The price at which the BI was matched
-                'minQty': 0,       # Maximum MES of Order to be submitted
-                'orderQty': 0,     # Size of related BI
-                'instrument':
-                {
-                        'symbol': '',
-                        'securityID': '',
-                        'securityIDSource':'',
-                        'currency': '',
-                        'securityExchange': ''
-                },                 # Financial Instrument of the Order to be submitted
-                'side': '',        # Side of the Order to be submitted
-                'reputationalScore': 0, # Reputation score
-                'TransactTime': '' # Time the message was generated
-        }
-
-        return osr
-
-    def update_reputation_score(self, bi_order, qbo_order):
+    def update_reputation_score(self, score, bi_order_oid, qbo_order):
 
         pass
 
@@ -1524,7 +1454,7 @@ class Discovery(Orderbook):
         # default return values
         trader_msgs = None
         tape_events = None
-        reqs = []
+        osrs = []
 
         # set up response messages as same as process_order() in Exchange()
         if response != None:
@@ -1533,7 +1463,9 @@ class Discovery(Orderbook):
             trader_msgs = response["TraderMsgs"]
             tape_events = response["TapeEvents"]
 
-            if 'OSRs' in response: reqs = response['OSRs']
+            if 'OSRs' in response:
+                self.osrs.extend(response['OSRs'])
+                osrs.extend(response['OSRs'])
 
             # total_fees = 0
             # # trader messages include details of fees charged by exchange for processing this order
@@ -1577,7 +1509,7 @@ class Discovery(Orderbook):
                                     'party2': None,
                                     'qty': total_qty}
 
-            return {'tape_summary':tape_summary, 'trader_msgs':trader_msgs, 'reqs':reqs}
+            return {'tape_summary':tape_summary, 'trader_msgs':trader_msgs, 'reqs':osrs}
         else: return {'tape_summary':None, 'trader_msgs':None}
 
 
@@ -1969,6 +1901,8 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, sum
 
         pending_cust_orders = []
 
+        QBO_pending_orders = []
+
         order_id = 0
 
         if verbose: print('\n%s;  ' % (sess_id))
@@ -2006,11 +1940,11 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, sum
                         can_order.ostyle = "CAN"
                         if verbose: print('can_order: %s' % (can_order))
 
-                        if can_order.osubtype != 'BI':
-                            exch_response = exchanges[0].process_order(time, can_order, process_verbose)
+                        # if can_order.osubtype != 'BI':
+                        exch_response = exchanges[0].process_order(time, can_order, process_verbose)
 
-                        if can_order.osubtype == 'BI' or can_order.osubtype == 'BDN':
-                            exch_response = discovery[0].process_order(time, can_order, process_verbose)
+                        # if can_order.osubtype == 'BI' or can_order.osubtype == 'BDN':
+                        #     exch_response = discovery[0].process_order(time, can_order, process_verbose)
 
                         exch_msg = exch_response['trader_msgs']
 
@@ -2064,6 +1998,13 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, sum
             while tid == old_tid:
                 tid = list(traders.keys())[random.randint(0, len(traders) - 1)]
 
+            # customer order or QBO
+            count1 = len(traders[tid].orders)
+            count2 = len(traders[tid].qbo_orders)
+            num1 = count1
+            num2 = count2
+            ordertype = random.choices(population=[traders[tid].getorder, traders[tid].generate_QBO],weights=[num1, num2],k=1)[0]
+
             # currently, all quotes/orders are issued only to the single exchange at exchanges[0]
             # it is that exchange's responsibility to then deal with Order Protection / trade-through (Reg NMS Rule611)
             # i.e. the exchange logic could/should be extended to check the best LOB price of each other exchange
@@ -2073,6 +2014,9 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, sum
             if verbose: print('Trader Order: %s' % str(order))
 
             if order != None:
+                # catch the oid of BI order
+                bi_oid = order.orderid
+
                 # give each new order a unique ID
                 order.orderid = order_id
                 order_id += 1
@@ -2099,11 +2043,11 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, sum
                     if verbose: print('> can_order %s' % str(can_order))
 
                     # send cancellation to exchange
-                    if can_order.osubtype != 'BI':
-                        exch_response = exchanges[0].process_order(time, can_order, process_verbose)
+                    # if can_order.osubtype != 'BI':
+                    exch_response = exchanges[0].process_order(time, can_order, process_verbose)
 
-                    if can_order.osubtype == 'BI' or can_order.osubtype == 'BDN':
-                        exch_response = discovery[0].process_order(time, can_order, process_verbose)
+                    # if can_order.osubtype == 'BI' or can_order.osubtype == 'BDN':
+                    #     exch_response = discovery[0].process_order(time, can_order, process_verbose)
 
                     exch_msg = exch_response['trader_msgs']
                     tape_sum = exch_response['tape_summary']
@@ -2143,18 +2087,26 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, sum
                 # add order to list of live orders issued by this trader
                 traders[tid].quotes.append(order)
 
+                # update the reputation score
+                if order.osubtype == 'QBO':
+                    discovery[0].update_reputation_score(traders[tid].reputation, bi_oid, order)
+
                 if verbose: print('Trader %s quotes[-1]: %s' % (tid, traders[tid].quotes[-1]))
 
                 # send this order to exchange and receive response
-                if order.osubtype != 'BI':
-                    exch_response = exchanges[0].process_order(time, order, process_verbose)
+                # if order.osubtype != 'BI':
+                exch_response = exchanges[0].process_order(time, order, process_verbose)
 
-                if order.osubtype == 'BI' or order.osubtype == 'BDN':
-                    exch_response = discovery[0].process_order(time, order, process_verbose)
+                # if order.osubtype == 'BI' or order.osubtype == 'BDN':
+                #     exch_response = discovery[0].process_order(time, order, process_verbose)
 
                 exch_msgs = exch_response['trader_msgs']
                 tape_sum = exch_response['tape_summary']
 
+                # add OSR to qbo_orders in trader
+                if 'OSRs' in exch_response:
+                    QBO_pending_orders.extend(exch_response['OSRs'])
+                    # TODO check expired OSR, delete it from QBO_pending_orders
 
 
                 # because the order just processed might have changed things, now go through each
@@ -2258,7 +2210,7 @@ if __name__ == "__main__":
     # buyers_spec = [('ISHV', 10)]
     # sellers_spec = buyers_spec
     buyers_spec = [('ZIP', 10)]
-    sellers_spec = [('ISHV', 10)]
+    sellers_spec = [('ZIP', 10)]
     traders_spec = {'sellers':sellers_spec, 'buyers':buyers_spec}
 
     sys.stdout.flush()
