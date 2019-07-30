@@ -29,7 +29,7 @@ class Assignment:
 # The order-style may require additional parameters which are bundled into style_params (=None if not)
 class Order:
 
-    def __init__(self, trader_id, otype, ostyle, price, qty, time, endtime, orderid, osubtype=None):
+    def __init__(self, trader_id, otype, ostyle, price, qty, time, endtime, orderid, limitprice=0, MES=0, osubtype=None, marketid=''):
         self.tid = trader_id    # trader i.d.
         # order type (bid or ask -- what side of LOB is it for)
         self.otype = otype
@@ -45,7 +45,10 @@ class Order:
         self.myref = None
         self.styleparams = None  # style parameters -- initially null, filled in later
 
+        self.limitprice = limitprice
+        self.MES = MES
         self.osubtype = osubtype  # order sub type of BI or BDN
+        self.marketid = marketid
 
     def __str__(self):
         return '[%s %s %s P=%03d Q=%s T=%5.2f OID:%d Params=%s MyRef=%s SubType=%s]' % \

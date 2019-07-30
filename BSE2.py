@@ -1129,14 +1129,14 @@ class Exchange(Orderbook):
 
 
         # which pool does it get sent to: Lit or Dark?
-        if order.qty < block_size and 'Drk' not in order.market:
+        if order.qty < block_size and 'Drk' not in order.marketid:
             if verbose: print('Process_order: qty=%d routes to LIT pool' % order.qty)
             pool = self.lit
-            order.market = self.eid + 'Lit'
+            order.marketid = self.eid + 'Lit'
         else:
             if verbose: print('Process_order: qty=%d routes to DARK pool' % order.qty)
             pool = self.drk
-            order.market = self.eid + 'Drk'
+            order.marketid = self.eid + 'Drk'
 
         # Cancellations don't generate new order-ids
         if ostyle == 'CAN':
@@ -1569,11 +1569,11 @@ def populate_market(traders_spec, traders, shuffle, verbose):
             elif robottype == 'SHVR':
                 return Trader_Shaver('SHVR', name, 0.00, 0)
             elif robottype == 'ISHV':
-                return Trader_ISHV('ISHV', name, 0.00, 0, 0.5)
+                return Trader_ISHV('ISHV', name, 0.00, 0)
             elif robottype == 'SNPR':
                 return Trader_Sniper('SNPR', name, 0.00, 0)
             elif robottype == 'ZIP':
-                return Trader_ZIP('ZIP', name, 0.00, 0, 0.5)
+                return Trader_ZIP('ZIP', name, 0.00, 0, 0.5, 0.5, 100)
             elif robottype == 'MAA':
                 pass
                 # return Trader_AA('MAA', name, 0.00, 0)
