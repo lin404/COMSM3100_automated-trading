@@ -1794,8 +1794,13 @@ def customer_orders(time, last_update, traders, trader_stats, os, pending, base_
 
         oid = base_oid
 
-        min_qty = 200
+        min_qty = 1
+        mid_qty = 200 # equal to the block_size
         max_qty = 300
+
+        # weight of generating lit orders or drk orders
+        lit_weight = 0.5
+        drk_weight = 1
 
         if len(pending) < 1:
             # list of pending (to-be-issued) customer orders is empty, so generate a new one
@@ -1810,7 +1815,8 @@ def customer_orders(time, last_update, traders, trader_stats, os, pending, base_
                 issuetime = time + issuetimes[t]
                 tname = 'B%02d' % t
                 orderprice = getorderprice(t, sched_end, sched, n_buyers, mode, issuetime)
-                orderqty = random.randint(min_qty,max_qty)
+                qty_range = random.choices(population=[(min_qty,mid_qty), (mid_qty, max_qty)],weights=[lit_weight, drk_weight],k=1)[0]
+                orderqty = random.randint(qty_range[0],qty_range[1])
                 # order = Order(tname, ordertype, orderstyle, orderprice, orderqty, issuetime, None, oid)
                 order = Assignment("CUS", tname, ordertype, orderstyle, orderprice, orderqty, issuetime, None, oid)
                 oid += 1
@@ -1825,7 +1831,8 @@ def customer_orders(time, last_update, traders, trader_stats, os, pending, base_
                 issuetime = time + issuetimes[t]
                 tname = 'S%02d' % t
                 orderprice = getorderprice(t, sched_end, sched, n_sellers, mode, issuetime)
-                orderqty = random.randint(min_qty, max_qty)
+                qty_range = random.choices(population=[(min_qty,mid_qty), (mid_qty, max_qty)],weights=[lit_weight, drk_weight],k=1)[0]
+                orderqty = random.randint(qty_range[0],qty_range[1])
                 # order = Order(tname, ordertype, orderstyle, orderprice, orderqty, issuetime, None, oid)
                 order = Assignment("CUS", tname, ordertype, orderstyle, orderprice, orderqty, issuetime, None, oid)
                 oid += 1
