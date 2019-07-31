@@ -29,7 +29,7 @@ class Assignment:
 # The order-style may require additional parameters which are bundled into style_params (=None if not)
 class Order:
 
-    def __init__(self, trader_id, otype, ostyle, price, qty, time, endtime, orderid, limitprice=0, MES=0, subtype=None, marketid=''):
+    def __init__(self, trader_id, otype, ostyle, price, qty, time, endtime, orderid, limitprice=0, MES=0, subtype=None, marketid=None):
         self.tid = trader_id    # trader i.d.
         # order type (bid or ask -- what side of LOB is it for)
         self.otype = otype
@@ -76,3 +76,15 @@ class Exch_msg:
         return 'TID:%s OID:%s OTYPE:%s Event:%s Trns:%s RevO:%s Fee:%d Bal:%d' % \
                (self.tid, self.oid, self.otype, self.event, str(self.trns),
                 str(self.revo), self.fee, self.balance)
+
+
+class OSR_msg:
+
+    def __init__(self, eventtype, time, order, transactions):
+        self.eventtype = eventtype
+        self.time = time
+        self.order = order
+        self.trns = transactions
+
+    def __str__(self):
+        return 'Event:%s TIME:%s ORDER:%s Trns:%s' % (self.eventtype, self.time, self.order, str(self.trns))

@@ -10,7 +10,7 @@ from BSE2_msg_classes import Assignment, Order, Exch_msg
 # all Traders have a trader id, bank balance, blotter, and list of orders to execute
 class Trader:
 
-        def __init__(self, ttype, tid, balance, time, weight=0, reputation=100):
+        def __init__(self, ttype, tid, balance, time, biweight=0, bdnweight=0, reputation=100):
                 self.ttype = ttype      # what type / strategy this trader is
                 self.tid = tid          # trader unique ID code
                 self.balance = balance  # money in the bank
@@ -26,8 +26,13 @@ class Trader:
                 self.n_trades = 0       # how many trades has this trader done?
                 self.lastquote = None   # record of what its most recent quote was/is (incl price)
 
-                self.weight = weight
+                self.bi_quotes = []
+                self.bi_max_quotes = 1
+                self.bi_lastquote = None
+                self.biweight = biweight
+                self.bdnweight = bdnweight
                 self.reputation = reputation
+                self.qbo_orders = []
 
         def __str__(self):
                 blotterstring = ''
@@ -35,6 +40,21 @@ class Trader:
                         blotterstring = blotterstring + '[[%s], %s]' % (str(b[0]), b[1])
                 return '[TID=%s type=%s balance=%s blotter=%s orders=%s n_trades=%s profitpertime=%s]' \
                        % (self.tid, self.ttype, self.balance, blotterstring, self.orders, self.n_trades, self.profitpertime)
+        # delete a customer order from trader's list of orders being worked
+
+
+        def del_BI_order(self, oid, verbose):
+            bi_orders = []
+            for o in self.bi_quotes:
+                if o.orderid != oid: bi_orders.append(o)
+
+            self.bi_quotes= bi_orders
+
+
+        def add_QBO_order(self, msg, time, verbose):
+            # add a QBO order to trader's records
+            if msg.eventtype == 'FILL': self.del_BI_order(msg.order.orderid, verbose)
+            self.qbo_orders.append(msg)
 
 
         def add_cust_order(self, order, verbose):
@@ -355,13 +375,7 @@ class Trader_ISHV(Trader):
                                 else:
                                         quoteprice = 200 #KLUDGE -- come back to fix todo
 
-                        subtype = None
-                        big_block = 200
-
-                        if self.orders[0].qty >= big_block:
-                            subtype = random.choices(population=['BI','BDN', None],weights=[self.weight,1-self.weight, 0.5],k=1)[0]
-
-                        order = Order(self.tid, otype, ostyle, quoteprice, self.orders[0].qty, time, None, -1, subtype)
+                        order = Order(self.tid, otype, ostyle, quoteprice, self.orders[0].qty, time, None, -1)
                         self.lastquote = order
                 return order
 
@@ -415,8 +429,8 @@ class Trader_ZIP(Trader):
         #    so a single trader can both buy AND sell
         #    -- in the original, traders were either buyers OR sellers
 
-        def __init__(self, ttype, tid, balance, time, weight=0):
-                Trader.__init__(self, ttype, tid, balance, time, weight)
+        def __init__(self, ttype, tid, balance, time, biweight=0, bdnweight=0, reputation=0):
+                Trader.__init__(self, ttype, tid, balance, time, biweight, bdnweight, reputation)
                 m_fix = 0.05
                 m_var = 0.05
                 self.job = None                                 # this is 'Bid' or 'Ask' depending on customer order
@@ -495,18 +509,47 @@ class Trader_ZIP(Trader):
                         quoteprice = int(self.limit * (1 + self.margin))
                         self.price = quoteprice
 
+                        # set limitprice and MES
+                        limitprice = quoteprice
+                        MES = 1
+
                         # only big block order can be BI or BDN order
                         subtype = None
                         big_block = 200
 
                         if self.orders[0].qty >= big_block:
-                            subtype = random.choices(population=['BI','BDN', None],weights=[self.weight, 1-self.weight, 0.5],k=1)[0]
+                            subtype = random.choices(population=['BI','BDN', None],weights=[self.biweight, self.bdnweight, 1-self.bdnweight],k=1)[0]
 
-                        order = Order(self.tid, self.job, "LIM", quoteprice, self.orders[0].qty, time, None, -1, subtype)
-                        self.lastquote = order
+                        order = Order(self.tid, self.job, "LIM", quoteprice, self.orders[0].qty, time, None, -1, limitprice, MES, subtype, None)
+
+                        if subtype == 'BI':
+                            self.bi_lastquote = order
+                        else:
+                            self.lastquote = order
 
                 return order
 
+        def generate_QBO(self, time, countdown, lob, verbose):
+
+            if len(self.qbo_orders) < 1:
+                self.active = False
+                order = None
+
+            else:
+                self.active = True
+                oid = self.qbo_orders[0].atype
+                self.job = self.qbo_orders[0].atype
+                price = self.qbo_orders[0].atype
+                qty = self.qbo_orders[0].atype
+
+                limitprice = price
+                MES = qty
+                subtype = 'QBO'
+
+                order = Order(self.tid, self.job, "LIM", price, qty, time, None, oid, limitprice, MES, subtype, None)
+                self.lastquote = order
+
+            return order
 
         # update margin on basis of what happened in market
         def respond(self, time, lob, trade, verbose):
