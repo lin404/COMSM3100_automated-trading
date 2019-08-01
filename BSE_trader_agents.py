@@ -577,6 +577,7 @@ class Trader_ZIP(Trader):
                     MES = 1
 
                     order = Order(self.tid, self.job, "LIM", ave_price, ave_qty, time, None, -1, limitprice, MES, subtype, 'Drk', sqrid)
+                    order.myref = qbo_order.myref
                     self.lastquote = order
 
                 del self.qbo_orders[0]

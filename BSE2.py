@@ -1844,7 +1844,9 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, sum
                 order.orderid = order_id
                 order_id += 1
 
-                order.myref = traders[tid].orders[0].assignmentid  # attach customer order ID to this exchange order
+                # QBO myref will be set as same as BI order. when QBO order is generated.
+                if not order.myref:
+                    order.myref = traders[tid].orders[0].assignmentid  # attach customer order ID to this exchange order
                 if verbose: print('Order with myref=%s' % order.myref)
 
                 # Sanity check: catch bad traders here
