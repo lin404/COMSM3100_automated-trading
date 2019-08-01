@@ -54,6 +54,7 @@ class Trader:
         def add_QBO_order(self, msg, time, verbose):
             # add a QBO order to trader's records
             if msg.eventtype == 'FILL': self.del_BI_order(msg.order.orderid, verbose)
+            # TODO add all(Partial) OSR to qbo_orders??
             self.qbo_orders.append(msg)
 
 
@@ -513,6 +514,13 @@ class Trader_ZIP(Trader):
                         limitprice = quoteprice
                         MES = 1
 
+                        # when reputation falls below the Reputational Score Threshold (RST)
+                        # the trader will no longer generate BI/BDN
+                        threshold = 50
+                        if self.reputation < threshold:
+                            self.biweight = 0
+                            self.bdnweight = 0
+
                         # only big block order can be BI or BDN order
                         subtype = None
                         big_block = 200
@@ -529,6 +537,9 @@ class Trader_ZIP(Trader):
 
                 return order
 
+        def update_score(self, score, verbose):
+            self.reputation = score
+
         def generate_QBO(self, time, countdown, lob, verbose):
 
             if len(self.qbo_orders) < 1:
@@ -536,18 +547,39 @@ class Trader_ZIP(Trader):
                 order = None
 
             else:
-                self.active = True
-                oid = self.qbo_orders[0].atype
-                self.job = self.qbo_orders[0].atype
-                price = self.qbo_orders[0].atype
-                qty = self.qbo_orders[0].atype
+                sqrid = self.qbo_orders[0].sqrid
 
-                limitprice = price
-                MES = qty
+                qbo_order = self.qbo_orders[0].order
+                qty = qbo_order.qty
+                price = qbo_order.price
+
                 subtype = 'QBO'
 
-                order = Order(self.tid, self.job, "LIM", price, qty, time, None, oid, limitprice, MES, subtype, None)
-                self.lastquote = order
+                # check if the order request has expired >0.5?
+                if time - self.qbo_orders[0].time > 0.5:
+                    self.active = False
+                    order = Order(self.tid, self.job, "CAN", price, qty, time, None, -1, 0, 0, subtype, None, sqrid)
+
+                else:
+                    self.active = True
+
+                    total_price = 0
+                    total_qty = 0
+
+                    for trn in self.qbo_orders[0].trns:
+                        total_price += trn['price']*trn['qty']
+                        total_qty += trn['qty']
+
+                    ave_price = total_price/total_qty
+                    ave_qty = random.randint(total_qty, qty)
+
+                    limitprice = ave_price
+                    MES = 1
+
+                    order = Order(self.tid, self.job, "LIM", ave_price, ave_qty, time, None, -1, limitprice, MES, subtype, 'Drk', sqrid)
+                    self.lastquote = order
+
+                del self.qbo_orders[0]
 
             return order
 

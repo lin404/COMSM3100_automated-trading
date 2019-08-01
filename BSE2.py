@@ -50,6 +50,7 @@ import math
 import random
 import csv
 import collections
+import copy
 from datetime import datetime
 
 from BSE2_msg_classes import Assignment, Order, Exch_msg, OSR_msg
@@ -118,7 +119,6 @@ class Orderbook_half:
         self.worst_price = worstprice
         # self.n_orders = 0  # how many orders?
         # self.lob_depth = 0  # how many different prices on lob?
-
 
     def __str__(self):
         v = 'OB_H> '
@@ -258,6 +258,7 @@ class Orderbook_half:
 
             return {"TraderMsgs":[tmsg], "TapeEvents":tape_events}
         else:
+            print(f'FAILNOP: ORDERID={order.orderid}')
             print ('NOP') # no operation -- order ID not in the order dictionary
             sys.exit('Fail: book_CAN() attempts to delete nonexistent order ')
 
@@ -530,19 +531,19 @@ class Orderbook_half:
         msg_list = []
         trn_lst = []
 
-        init_order = order
-        qty_remaining = init_order.qty
+        original_order = copy.copy(order)
+        qty_remaining = order.qty
 
         while qty_remaining > 0 and len(sorted_orders) > 0:
 
             # update qty of order
-            init_order.qty = qty_remaining
+            order.qty = qty_remaining
 
             if order.otype == 'Bid':
-                buyer = init_order
+                buyer = order
                 seller = sorted_orders[0][1]
             elif order.otype == 'Ask':
-                seller = init_order
+                seller = order
                 buyer = sorted_orders[0][1]
 
             # buyer friendly price and qty
@@ -557,7 +558,7 @@ class Orderbook_half:
                 # counterpart order is full filled
                 if qty_remaining > 0:
                     if sorted_orders[0][1].subtype == 'BI':
-                        msg = OSR_msg('FILL', time, sorted_orders[0][1], [trn])
+                        msg = OSR_msg(-1, 'FILL', time, sorted_orders[0][1], [trn])
                         msg_list.append(msg)
                         del self.orders[sorted_orders[0][0]]
 
@@ -568,11 +569,11 @@ class Orderbook_half:
                 elif qty_remaining == 0 and buyer.qty == seller.qty:
                     if order.subtype == 'BI':
                         trn_lst.append(trn)
-                        msg = OSR_msg('FILL', time, order, trn_lst)
+                        msg = OSR_msg(-1, 'FILL', time, original_order, trn_lst)
                         msg_list.append(msg)
 
                     if sorted_orders[0][1].subtype == 'BI':
-                        msg = OSR_msg('FILL', time, sorted_orders[0][1], [trn])
+                        msg = OSR_msg(-1, 'FILL', time, sorted_orders[0][1], [trn])
                         msg_list.append(msg)
                         del self.orders[sorted_orders[0][0]]
 
@@ -580,21 +581,22 @@ class Orderbook_half:
                 elif qty_remaining == 0 and buyer.qty != seller.qty:
                     if order.subtype == 'BI':
                         trn_lst.append(trn)
-                        msg = OSR_msg('FILL', time, order, trn_lst)
+                        msg = OSR_msg(-1, 'FILL', time, original_order, trn_lst)
                         msg_list.append(msg)
 
                     if sorted_orders[0][1].subtype == 'BI':
-                        msg = OSR_msg('PARTIAL', time, sorted_orders[0][1], [trn])
+                        msg = OSR_msg(-1, 'PARTIAL', time, sorted_orders[0][1], [trn])
                         msg_list.append(msg)
                         self.orders[sorted_orders[0][0]].qty -= executed_qty
 
             del sorted_orders[0]
 
-        if qty_remaining > 0:
-            msg = OSR_msg('PARTIAL', time, order, trn_lst)
+        if qty_remaining > 0 and order.subtype == 'BI' and len(trn_lst) > 0:
+            msg = OSR_msg(-1, 'PARTIAL', time, original_order, trn_lst)
             msg_list.append(msg)
 
-        order.qty = qty_remaining
+        if order.subtype == 'BI':
+            order.qty = qty_remaining
 
         return [order, {"TraderMsgs":msg_list, "TapeEvents":None}]
 
@@ -612,6 +614,7 @@ class Orderbook(Orderbook_half):
         self.last_trans_p = None        # price of last transaction
         self.last_trans_q = None        # quantity of last transaction
 
+        self.sqrid = 0
 
     def __str__(self):
         s = 'Orderbook:\n'
@@ -748,6 +751,11 @@ class Orderbook(Orderbook_half):
 
         if order.qty > 0 or order.subtype == 'BDN':
             self.add_lim_order(order, verbose)
+
+        if response:
+            for msg in response['TraderMsgs']:
+                msg.sqrid = self.sqrid
+                self.sqrid += 1
 
         return response
 
@@ -1249,9 +1257,19 @@ class Discovery(Orderbook):
             s = '[%s bal=%d rep=%s orders=%s msgs=%s]' % (self.tid, self.balance, self.reputation, self.orders, self.msgs)
             return s
 
-    def update_reputation_score(self, score, bi_order_oid, qbo_order):
+    # do not del the sqr_recs[sqrid], since QBO can be resubmitted?
+    def reputation_score(self, order, verbose):
+        score = 0
 
-        pass
+        if order.ostyle == 'CAN':
+            return score
+
+        old_order = self.sqr_recs[order.sqrid]
+
+
+
+        return score
+
 
     def del_BDN(self, oid, otype, verbose):
         self.bi.process_BDN_CAN(oid, otype, verbose)
@@ -1309,13 +1327,7 @@ class Discovery(Orderbook):
             # record BI order for updating reputation score
             if order.ostyle != 'CAN':
                 for msg in trader_msgs:
-                    if msg.order.orderid in self.sqr_recs:
-                        self.sqr_recs[msg.order.orderid]['trns'].append(msg.trns)
-                    else:
-                        self.sqr_recs[msg.order.orderid] = {}
-                        self.sqr_recs[msg.order.orderid]['order'] = msg.order
-                        self.sqr_recs[msg.order.orderid]['time'] = time
-                        self.sqr_recs[msg.order.orderid]['trns'] = [msg.trns]
+                    self.sqr_recs[msg.sqrid] = msg
 
             return {'tape_summary':tape_events, 'trader_msgs':trader_msgs}
         else: return {'tape_summary':None, 'trader_msgs':None}
@@ -1716,8 +1728,6 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, sum
 
         pending_cust_orders = []
 
-        QBO_pending_orders = []
-
         order_id = 0
 
         if verbose: print('\n%s;  ' % (sess_id))
@@ -1756,7 +1766,7 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, sum
                         if verbose: print('can_order: %s' % (can_order))
 
                         if can_order.subtype == 'BDN':
-                            discovery[0].process_order(time, can_order, None, process_verbose)
+                            discovery[0].process_order(time, can_order, process_verbose)
 
                         exch_response = exchanges[0].process_order(time, can_order, process_verbose)
 
@@ -1814,15 +1824,18 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, sum
             # customer order or QBO TODO
             count1 = len(traders[tid].orders)
             count2 = len(traders[tid].qbo_orders)
-            num1 = count1
-            num2 = count2
-            ordertype = random.choices(population=[traders[tid].getorder, traders[tid].generate_QBO],weights=[num1, num2],k=1)[0]
+            if count1 > 0 or count2 > 0:
+                num1 = count1/(count1+count2)
+                num2 = count2/(count1+count2)
+            else:
+                num1 = num2 = 1
+            ordergenerator = random.choices(population=[traders[tid].getorder, traders[tid].generate_QBO],weights=[num1, num2],k=1)[0]
 
             # currently, all quotes/orders are issued only to the single exchange at exchanges[0]
             # it is that exchange's responsibility to then deal with Order Protection / trade-through (Reg NMS Rule611)
             # i.e. the exchange logic could/should be extended to check the best LOB price of each other exchange
             # that is yet to be implemented here
-            order = traders[tid].getorder(time, time_left, lobs[0], verbose)
+            order = ordergenerator(time, time_left, lobs[0], verbose)
 
             if verbose: print('Trader Order: %s' % str(order))
 
@@ -1848,10 +1861,12 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, sum
                     tape_sum = exch_response['tape_summary']
 
                     # delete BI order in bi_quotes
-                    traders[tid].del_bi_order(exch_msg[0].oid, bookkeep_verbose)
+                    traders[tid].del_BI_order(exch_msg[0].oid, bookkeep_verbose)
 
                 # how many quotes does this trader already have sat on an exchange?
-                if order.subtype != 'BI' and len(traders[tid].quotes) >= traders[tid].max_quotes :
+                if order.subtype == 'QBO' and order.ostyle == 'CAN':
+                    pass
+                elif order.subtype != 'BI' and len(traders[tid].quotes) >= traders[tid].max_quotes :
                     # need to clear a space on the trader's list of quotes, by deleting one
                     # new quote replaces trader's oldest previous quote
                     # bit of a  kludge -- just deletes oldest quote, which is at head of list
@@ -1901,22 +1916,19 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, sum
                             sys.stdout.flush()
                             sys.exit("CAN error")
 
-
-                # add order to list of live orders issued by this trader
-                # if order.subtype == 'BI':
-                #     traders[tid].bi_quotes.append(order)
-                # else:
-                if order.subtype != 'BI':
-                    traders[tid].quotes.append(order)
-
                 # update the reputation score TODO
                 if order.subtype == 'QBO':
-                    discovery[0].update_reputation_score(traders[tid].reputation, order.orderid, order)
+                    score = discovery[0].reputation_score(order, verbose)
+                    traders[tid].update_score(score, verbose)
 
                 if verbose: print('Trader %s quotes[-1]: %s' % (tid, traders[tid].quotes[-1]))
 
                 # send this order to exchange and receive response
                 if order.subtype == 'BI' or order.subtype == 'BDN':
+
+                    if order.subtype == 'BI':
+                        traders[tid].bi_quotes.append(order)
+
                     exch_response = discovery[0].process_order(time, order, process_verbose)
 
                     exch_msgs = exch_response['trader_msgs']
@@ -1927,7 +1939,11 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, sum
                             traders[msg.order.tid].add_QBO_order(msg, time, bookkeep_verbose)
 
 
-                if order.subtype != 'BI':
+                if order.subtype == 'QBO' and order.ostyle == 'CAN':
+                    pass
+                elif order.subtype != 'BI':
+                    traders[tid].quotes.append(order)
+
                     exch_response = exchanges[0].process_order(time, order, process_verbose)
 
                     exch_msgs = exch_response['trader_msgs']
