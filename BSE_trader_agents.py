@@ -54,7 +54,7 @@ class Trader:
         def add_QBO_order(self, msg, time, verbose):
             # add a QBO order to trader's records
             if msg.eventtype == 'FILL': self.del_BI_order(msg.order.orderid, verbose)
-            # TODO add all(Partial) OSR to qbo_orders??
+            # add all(Partial) OSR to qbo_orders??
             self.qbo_orders.append(msg)
 
 
@@ -529,9 +529,6 @@ class Trader_ZIP(Trader):
                             self.lastquote = order
 
                 return order
-
-        def update_score(self, score, verbose):
-            self.reputation = score
 
         def generate_QBO(self, time, countdown, lob, verbose):
 

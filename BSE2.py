@@ -559,7 +559,7 @@ class Orderbook_half:
                 # counterpart order is full filled
                 if qty_remaining > 0:
                     if sorted_orders[0][1].subtype == 'BI':
-                        msg = OSR_msg(-1, 'FILL', time, sorted_orders[0][1], [trn], 0)
+                        msg = OSR_msg(-1, 'FILL', time, sorted_orders[0][1], [trn])
                         msg_list.append(msg)
                         del self.orders[sorted_orders[0][0]]
 
@@ -570,11 +570,11 @@ class Orderbook_half:
                 elif qty_remaining == 0 and buyer.qty == seller.qty:
                     if order.subtype == 'BI':
                         trn_lst.append(trn)
-                        msg = OSR_msg(-1, 'FILL', time, original_order, trn_lst, 0)
+                        msg = OSR_msg(-1, 'FILL', time, original_order, trn_lst)
                         msg_list.append(msg)
 
                     if sorted_orders[0][1].subtype == 'BI':
-                        msg = OSR_msg(-1, 'FILL', time, sorted_orders[0][1], [trn], 0)
+                        msg = OSR_msg(-1, 'FILL', time, sorted_orders[0][1], [trn])
                         msg_list.append(msg)
                         del self.orders[sorted_orders[0][0]]
 
@@ -586,14 +586,14 @@ class Orderbook_half:
                         msg_list.append(msg)
 
                     if sorted_orders[0][1].subtype == 'BI':
-                        msg = OSR_msg(-1, 'PARTIAL', time, sorted_orders[0][1], [trn], 0)
+                        msg = OSR_msg(-1, 'PARTIAL', time, sorted_orders[0][1], [trn])
                         msg_list.append(msg)
                         self.orders[sorted_orders[0][0]].qty -= executed_qty
 
             del sorted_orders[0]
 
         if qty_remaining > 0 and order.subtype == 'BI' and len(trn_lst) > 0:
-            msg = OSR_msg(-1, 'PARTIAL', time, original_order, trn_lst, 0)
+            msg = OSR_msg(-1, 'PARTIAL', time, original_order, trn_lst)
             msg_list.append(msg)
 
         if order.subtype == 'BI':
@@ -1278,21 +1278,26 @@ class Discovery(Orderbook):
 
             return True
 
-        def composite_score(score):
-            weighting = 50
-            return score
+        def calculate_composite_score(score_lst):
+            weithting = 1
+            composite_score = 0
+            for score in score_lst:
+                composite_score += score * weithting
+                weithing +=1
+
+            composite_score = round(composite_score/sum(range(1, weithting)))
+            return composite_score
 
         bi_order = self.sqr_recs[order.sqrid].order
         if not marketable(order, bi_order):
-            score = self.repu_recs[order.tid]
-            score = composite_score(score)
+            score = 0
 
         else:
             size_diff = (bi_order.qty - order.qty)/bi_order.qty
             score = 100 - 50 * np.tanh(size_diff)/np.tanh(1)
-            score = composite_score(score)
 
-        self.repu_recs[order.tid] = score
+        self.repu_recs[order.tid].append(score)
+        return calculate_composite_score(self.repu_recs[order.tid])
 
 
     def del_BDN(self, oid, otype, verbose):
@@ -1302,10 +1307,12 @@ class Discovery(Orderbook):
 
         # record the reputation score
         if order.tid not in self.repu_recs:
-            self.repu_recs[order.tid] = order.reputation
+            self.repu_recs[order.tid] = []
+            # initial score is 100
+            self.repu_recs[order.tid].append(100)
 
         # cancel BI order when its reputation is lower than threshold
-        threshold = 55
+        threshold = 50
         if self.repu_recs[order.tid] < threshold:
             return {'tape_summary':None, 'trader_msgs':None}
 
@@ -1361,7 +1368,6 @@ class Discovery(Orderbook):
             if order.ostyle != 'CAN':
                 for msg in trader_msgs:
                     self.sqr_recs[msg.sqrid] = msg
-                    msg.score = self.sqr_recs[msg.order.tid]
 
             return {'tape_summary':tape_events, 'trader_msgs':trader_msgs}
         else: return {'tape_summary':None, 'trader_msgs':None}
@@ -1957,7 +1963,7 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, sum
 
                 # update the reputation score
                 if order.subtype == 'QBO':
-                    discovery[0].reputation_score(order, verbose)
+                    traders[tid].reputation = discovery[0].reputation_score(order, verbose)
 
 
                 if verbose: print('Trader %s quotes[-1]: %s' % (tid, traders[tid].quotes[-1]))
