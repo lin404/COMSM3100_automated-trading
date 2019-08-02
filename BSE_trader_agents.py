@@ -514,13 +514,6 @@ class Trader_ZIP(Trader):
                         limitprice = quoteprice
                         MES = 1
 
-                        # when reputation falls below the Reputational Score Threshold (RST)
-                        # the trader will no longer generate BI/BDN
-                        threshold = 50
-                        if self.reputation < threshold:
-                            self.biweight = 0
-                            self.bdnweight = 0
-
                         # only big block order can be BI or BDN order
                         subtype = None
                         big_block = 200
@@ -553,12 +546,15 @@ class Trader_ZIP(Trader):
                 qty = qbo_order.qty
                 price = qbo_order.price
 
+                limitprice = qbo_order.limitprice
+                MES = qbo_order.MES
+
                 subtype = 'QBO'
 
                 # check if the order request has expired >0.5?
                 if time - self.qbo_orders[0].time > 0.5:
                     self.active = False
-                    order = Order(self.tid, self.job, "CAN", price, qty, time, None, -1, 0, 0, subtype, None, sqrid)
+                    order = Order(self.tid, self.job, "CAN", price, qty, time, None, -1, limitprice, MES, subtype, None, sqrid)
 
                 else:
                     self.active = True
@@ -570,15 +566,13 @@ class Trader_ZIP(Trader):
                         total_price += trn['price']*trn['qty']
                         total_qty += trn['qty']
 
-                    ave_price = total_price/total_qty
-                    ave_qty = random.randint(total_qty, qty)
+                    price = total_price/total_qty
+                    qty = random.randint(total_qty, qty)
 
-                    limitprice = ave_price
-                    MES = 1
-
-                    order = Order(self.tid, self.job, "LIM", ave_price, ave_qty, time, None, -1, limitprice, MES, subtype, 'Drk', sqrid)
-                    order.myref = qbo_order.myref
+                    order = Order(self.tid, self.job, "LIM", price, qty, time, None, -1, limitprice, MES, subtype, 'Drk', sqrid)
                     self.lastquote = order
+
+                order.myref = qbo_order.myref
 
                 del self.qbo_orders[0]
 

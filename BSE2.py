@@ -51,6 +51,7 @@ import random
 import csv
 import collections
 import copy
+import numpy as np
 from datetime import datetime
 
 from BSE2_msg_classes import Assignment, Order, Exch_msg, OSR_msg
@@ -1237,6 +1238,7 @@ class Discovery(Orderbook):
 
         # record the osrs for updating reputation scores
         self.sqr_recs = {}
+        self.repu_recs = {}
 
     def __str__(self):
         s = f'eid={self.eid}'
@@ -1259,22 +1261,53 @@ class Discovery(Orderbook):
 
     # do not del the sqr_recs[sqrid], since QBO can be resubmitted?
     def reputation_score(self, order, verbose):
-        score = 0
 
-        if order.ostyle == 'CAN':
+        def marketable(qbo, bi):
+            if order.ostyle == 'CAN':
+                return False
+
+            if qbo.MES > bi.MES:
+                return False
+
+            if bi.otype == 'Bid':
+                if qbo.limitprice < bi.limitprice:
+                    return False
+            elif bi.otype == 'Ask':
+                if qbo.limitprice > bi.limitprice:
+                    return False
+
+            return True
+
+        def composite_score(score):
+            weighting = 50
             return score
 
-        old_order = self.sqr_recs[order.sqrid]
+        bi_order = self.sqr_recs[order.sqrid].order
+        if not marketable(order, bi_order):
+            score = self.repu_recs[order.tid]
+            score = composite_score(score)
 
+        else:
+            size_diff = (bi_order.qty - order.qty)/bi_order.qty
+            score = 100 - 50 * np.tanh(size_diff)/np.tanh(1)
+            score = composite_score(score)
 
-
-        return score
+        self.repu_recs[order.tid] = score
 
 
     def del_BDN(self, oid, otype, verbose):
         self.bi.process_BDN_CAN(oid, otype, verbose)
 
     def process_order(self, time, order, verbose):
+
+        # record the reputation score
+        if order.tid not in self.repu_recs:
+            self.repu_recs[order.tid] = order.reputation
+
+        # cancel BI order when its reputation is lower than threshold
+        threshold = 55
+        if self.repu_recs[order.tid] < threshold:
+            return {'tape_summary':None, 'trader_msgs':None}
 
         osubtype = order.subtype
         book = self.bi
@@ -1301,10 +1334,10 @@ class Discovery(Orderbook):
 
         # filter out ineligible orders
         if osubtype == 'BI' and value < miv:
-            response = None
+            return {'tape_summary':None, 'trader_msgs':None}
 
         if osubtype == 'BDN' and value < mnv:
-            response = None
+            return {'tape_summary':None, 'trader_msgs':None}
 
         # add order to BI/BDN orderbook
         if order.ostyle == 'CAN':
@@ -1328,6 +1361,7 @@ class Discovery(Orderbook):
             if order.ostyle != 'CAN':
                 for msg in trader_msgs:
                     self.sqr_recs[msg.sqrid] = msg
+                    msg.score = self.sqr_recs[msg.order.tid]
 
             return {'tape_summary':tape_events, 'trader_msgs':trader_msgs}
         else: return {'tape_summary':None, 'trader_msgs':None}
@@ -1850,9 +1884,12 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, sum
                 if verbose: print('Order with myref=%s' % order.myref)
 
                 # Sanity check: catch bad traders here
-                traderprice = traders[tid].orders[0].price
-                if order.otype == 'Ask' and order.price < traderprice: sys.exit('Bad ask: Trader.price %s, Quote: %s' % (traderprice,order))
-                if order.otype == 'Bid' and order.price > traderprice: sys.exit('Bad bid: Trader.price %s, Quote: %s' % (traderprice,order))
+                if order.subtype == 'QBO':
+                    pass
+                else:
+                    traderprice = traders[tid].orders[0].price
+                    if order.otype == 'Ask' and order.price < traderprice: sys.exit('Bad ask: Trader.price %s, Quote: %s' % (traderprice,order))
+                    if order.otype == 'Bid' and order.price > traderprice: sys.exit('Bad bid: Trader.price %s, Quote: %s' % (traderprice,order))
 
                 # check quotes of BI orders on Discovery
                 if order.subtype == 'BI' and len(traders[tid].bi_quotes) >= traders[tid].bi_max_quotes:
@@ -1918,10 +1955,10 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, sum
                             sys.stdout.flush()
                             sys.exit("CAN error")
 
-                # update the reputation score TODO
+                # update the reputation score
                 if order.subtype == 'QBO':
-                    score = discovery[0].reputation_score(order, verbose)
-                    traders[tid].update_score(score, verbose)
+                    discovery[0].reputation_score(order, verbose)
+
 
                 if verbose: print('Trader %s quotes[-1]: %s' % (tid, traders[tid].quotes[-1]))
 

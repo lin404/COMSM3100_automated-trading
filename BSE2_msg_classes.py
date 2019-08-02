@@ -82,12 +82,13 @@ class Exch_msg:
 
 class OSR_msg:
 
-    def __init__(self, sqrid, eventtype, time, order, transactions):
+    def __init__(self, sqrid, eventtype, time, order, transactions, score):
         self.sqrid = sqrid
         self.eventtype = eventtype
         self.time = time
         self.order = order
         self.trns = transactions
+        self.score = score
 
     def __str__(self):
         return 'SQRID:%d Event:%s TIME:%s ORDER:%s Trns:%s' % (self.sqrid, self.eventtype, self.time, self.order, str(self.trns))
