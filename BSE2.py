@@ -559,7 +559,7 @@ class Orderbook_half:
                 # counterpart order is full filled
                 if qty_remaining > 0:
                     if sorted_orders[0][1].subtype == 'BI':
-                        msg = OSR_msg(-1, 'FILL', time, sorted_orders[0][1], [trn])
+                        msg = OSR_msg(-1, 'FILL', time, sorted_orders[0][1], [trn], 0)
                         msg_list.append(msg)
                         del self.orders[sorted_orders[0][0]]
 
@@ -570,11 +570,11 @@ class Orderbook_half:
                 elif qty_remaining == 0 and buyer.qty == seller.qty:
                     if order.subtype == 'BI':
                         trn_lst.append(trn)
-                        msg = OSR_msg(-1, 'FILL', time, original_order, trn_lst)
+                        msg = OSR_msg(-1, 'FILL', time, original_order, trn_lst, 0)
                         msg_list.append(msg)
 
                     if sorted_orders[0][1].subtype == 'BI':
-                        msg = OSR_msg(-1, 'FILL', time, sorted_orders[0][1], [trn])
+                        msg = OSR_msg(-1, 'FILL', time, sorted_orders[0][1], [trn], 0)
                         msg_list.append(msg)
                         del self.orders[sorted_orders[0][0]]
 
@@ -582,18 +582,18 @@ class Orderbook_half:
                 elif qty_remaining == 0 and buyer.qty != seller.qty:
                     if order.subtype == 'BI':
                         trn_lst.append(trn)
-                        msg = OSR_msg(-1, 'FILL', time, original_order, trn_lst)
+                        msg = OSR_msg(-1, 'FILL', time, original_order, trn_lst, 0)
                         msg_list.append(msg)
 
                     if sorted_orders[0][1].subtype == 'BI':
-                        msg = OSR_msg(-1, 'PARTIAL', time, sorted_orders[0][1], [trn])
+                        msg = OSR_msg(-1, 'PARTIAL', time, sorted_orders[0][1], [trn], 0)
                         msg_list.append(msg)
                         self.orders[sorted_orders[0][0]].qty -= executed_qty
 
             del sorted_orders[0]
 
         if qty_remaining > 0 and order.subtype == 'BI' and len(trn_lst) > 0:
-            msg = OSR_msg(-1, 'PARTIAL', time, original_order, trn_lst)
+            msg = OSR_msg(-1, 'PARTIAL', time, original_order, trn_lst, 0)
             msg_list.append(msg)
 
         if order.subtype == 'BI':
