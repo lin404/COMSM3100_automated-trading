@@ -1279,11 +1279,11 @@ class Discovery(Orderbook):
             return True
 
         def calculate_composite_score(score_lst):
-            weithting = 1
+            weithting = 100
             composite_score = 0
-            for score in score_lst:
+            for score in score_lst[::-1]:
                 composite_score += score * weithting
-                weithing +=1
+                weithing -= 1
 
             composite_score = round(composite_score/sum(range(1, weithting)))
             return composite_score
