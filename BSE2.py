@@ -1279,13 +1279,13 @@ class Discovery(Orderbook):
             return True
 
         def calculate_composite_score(score_lst):
-            weithting = 100
+            weighting = 100
             composite_score = 0
             for score in score_lst[::-1]:
-                composite_score += score * weithting
-                weithing -= 1
+                composite_score += score * weighting
+                weighting -= 1
 
-            composite_score = round(composite_score/sum(range(1, weithting)))
+            composite_score = round(composite_score/sum(range(weighting, 100)))
             return composite_score
 
         bi_order = self.sqr_recs[order.sqrid].order
