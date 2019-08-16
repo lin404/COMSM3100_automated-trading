@@ -523,9 +523,7 @@ class Trader_ZIP(Trader):
 
                         order = Order(self.tid, self.job, "LIM", quoteprice, self.orders[0].qty, time, None, -1, limitprice, MES, subtype, None)
 
-                        if subtype == 'BI':
-                            self.bi_lastquote = order
-                        else:
+                        if subtype != 'BI':
                             self.lastquote = order
 
                 return order
@@ -537,7 +535,7 @@ class Trader_ZIP(Trader):
                 order = None
 
             else:
-                sqrid = self.qbo_orders[0].sqrid
+                osrid = self.qbo_orders[0].osrid
 
                 qbo_order = self.qbo_orders[0].order
                 qty = qbo_order.qty
@@ -551,7 +549,7 @@ class Trader_ZIP(Trader):
                 # check if the order request has expired >0.5?
                 if time - self.qbo_orders[0].time > 0.5:
                     self.active = False
-                    order = Order(self.tid, self.job, "CAN", price, qty, time, None, -1, limitprice, MES, subtype, None, sqrid)
+                    order = Order(self.tid, self.job, "CAN", price, qty, time, None, -1, limitprice, MES, subtype, None, osrid)
 
                 else:
                     self.active = True
@@ -566,7 +564,7 @@ class Trader_ZIP(Trader):
                     price = total_price/total_qty
                     qty = random.randint(total_qty, qty)
 
-                    order = Order(self.tid, self.job, "LIM", price, qty, time, None, -1, limitprice, MES, subtype, 'Drk', sqrid)
+                    order = Order(self.tid, self.job, "LIM", price, qty, time, None, -1, limitprice, MES, subtype, 'Drk', osrid)
                     self.lastquote = order
 
                 order.myref = qbo_order.myref

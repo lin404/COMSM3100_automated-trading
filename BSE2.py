@@ -582,7 +582,7 @@ class Orderbook_half:
                 elif qty_remaining == 0 and buyer.qty != seller.qty:
                     if order.subtype == 'BI':
                         trn_lst.append(trn)
-                        msg = OSR_msg(-1, 'FILL', time, original_order, trn_lst, 0)
+                        msg = OSR_msg(-1, 'FILL', time, original_order, trn_lst)
                         msg_list.append(msg)
 
                     if sorted_orders[0][1].subtype == 'BI':
@@ -615,7 +615,7 @@ class Orderbook(Orderbook_half):
         self.last_trans_p = None        # price of last transaction
         self.last_trans_q = None        # quantity of last transaction
 
-        self.sqrid = 0
+        self.osrid = 0
 
     def __str__(self):
         s = 'Orderbook:\n'
@@ -755,8 +755,8 @@ class Orderbook(Orderbook_half):
 
         if response:
             for msg in response['TraderMsgs']:
-                msg.sqrid = self.sqrid
-                self.sqrid += 1
+                msg.osrid = self.osrid
+                self.osrid += 1
 
         return response
 
@@ -1165,8 +1165,8 @@ class Exchange(Orderbook):
                                     'party2': None,
                                     'qty': total_qty}
 
-            return {'tape_summary':tape_summary, 'trader_msgs':trader_msgs, 'sqr_msgs':None}
-        else: return {'tape_summary':None, 'trader_msgs':None, 'sqr_msgs':None}
+            return {'tape_summary':tape_summary, 'trader_msgs':trader_msgs, 'osr_msgs':None}
+        else: return {'tape_summary':None, 'trader_msgs':None, 'osr_msgs':None}
 
 
     # this returns the LOB data "published" by the exchange,
@@ -1237,7 +1237,7 @@ class Discovery(Orderbook):
         self.bi = Orderbook(eid + "BI")
 
         # record the osrs for updating reputation scores
-        self.sqr_recs = {}
+        self.osr_recs = {}
         self.repu_recs = {}
 
     def __str__(self):
@@ -1259,7 +1259,7 @@ class Discovery(Orderbook):
             s = '[%s bal=%d rep=%s orders=%s msgs=%s]' % (self.tid, self.balance, self.reputation, self.orders, self.msgs)
             return s
 
-    # do not del the sqr_recs[sqrid], since QBO can be resubmitted?
+    # do not del the osr_recs[osrid], since QBO can be resubmitted?
     def reputation_score(self, order, verbose):
 
         def marketable(qbo, bi):
@@ -1288,13 +1288,19 @@ class Discovery(Orderbook):
             composite_score = round(composite_score/sum(range(weighting, 100)))
             return composite_score
 
-        bi_order = self.sqr_recs[order.sqrid].order
+        bi_order = self.osr_recs[order.osrid].order
         if not marketable(order, bi_order):
             score = 0
 
         else:
             size_diff = (bi_order.qty - order.qty)/bi_order.qty
             score = 100 - 50 * np.tanh(size_diff)/np.tanh(1)
+
+        # record the reputation score
+        if order.tid not in self.repu_recs:
+            self.repu_recs[order.tid] = []
+            # initial score is 100
+            self.repu_recs[order.tid].append(100)
 
         self.repu_recs[order.tid].append(score)
         return calculate_composite_score(self.repu_recs[order.tid])
@@ -1304,12 +1310,6 @@ class Discovery(Orderbook):
         self.bi.process_BDN_CAN(oid, otype, verbose)
 
     def process_order(self, time, order, verbose):
-
-        # record the reputation score
-        if order.tid not in self.repu_recs:
-            self.repu_recs[order.tid] = []
-            # initial score is 100
-            self.repu_recs[order.tid].append(100)
 
         # cancel BI order when its reputation is lower than threshold
         threshold = 50
@@ -1339,18 +1339,18 @@ class Discovery(Orderbook):
         # Maximum Indication Value
         max_price = 400
 
-        # filter out ineligible orders
-        if osubtype == 'BI' and value < miv:
-            return {'tape_summary':None, 'trader_msgs':None}
-
-        if osubtype == 'BDN' and value < mnv:
-            return {'tape_summary':None, 'trader_msgs':None}
-
         # add order to BI/BDN orderbook
         if order.ostyle == 'CAN':
             # deleting a single existing order
             response = book.process_order_CAN(time, order, verbose)
         else:
+            # filter out ineligible orders
+            if osubtype == 'BI' and value < miv:
+                return {'tape_summary':None, 'trader_msgs':None}
+
+            if osubtype == 'BDN' and value < mnv:
+                return {'tape_summary':None, 'trader_msgs':None}
+
             response = book.process_order_match(time, order, verbose)
 
         # default return values
@@ -1367,7 +1367,7 @@ class Discovery(Orderbook):
             # record BI order for updating reputation score
             if order.ostyle != 'CAN':
                 for msg in trader_msgs:
-                    self.sqr_recs[msg.sqrid] = msg
+                    self.osr_recs[msg.osrid] = msg
 
             return {'tape_summary':tape_events, 'trader_msgs':trader_msgs}
         else: return {'tape_summary':None, 'trader_msgs':None}
