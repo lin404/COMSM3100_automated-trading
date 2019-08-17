@@ -1861,14 +1861,16 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, sum
             while tid == old_tid:
                 tid = list(traders.keys())[random.randint(0, len(traders) - 1)]
 
-            # customer order or QBO TODO
+            # customer order or QBO
             count1 = len(traders[tid].orders)
             count2 = len(traders[tid].qbo_orders)
             if count1 > 0 or count2 > 0:
                 num1 = count1/(count1+count2)
                 num2 = count2/(count1+count2)
             else:
-                num1 = num2 = 1
+                num1 = count1
+                num2 = count2
+
             ordergenerator = random.choices(population=[traders[tid].getorder, traders[tid].generate_QBO],weights=[num1, num2],k=1)[0]
 
             # currently, all quotes/orders are issued only to the single exchange at exchanges[0]
