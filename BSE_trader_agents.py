@@ -537,12 +537,12 @@ class Trader_ZIP(Trader):
             else:
                 osrid = self.qbo_orders[0].osrid
 
-                qbo_order = self.qbo_orders[0].order
-                qty = qbo_order.qty
-                price = qbo_order.price
+                bi_order = self.qbo_orders[0].order
+                qty = bi_order.qty
+                price = bi_order.price
 
-                limitprice = qbo_order.limitprice
-                MES = qbo_order.MES
+                limitprice = bi_order.limitprice
+                MES = bi_order.MES
 
                 subtype = 'QBO'
 
@@ -562,12 +562,12 @@ class Trader_ZIP(Trader):
                         total_qty += trn['qty']
 
                     price = total_price/total_qty
-                    qty = random.randint(total_qty, qty)
+                    # qty = random.randint(total_qty, qty)
 
                     order = Order(self.tid, self.job, "LIM", price, qty, time, None, -1, limitprice, MES, subtype, 'Drk', osrid)
                     self.lastquote = order
 
-                order.myref = qbo_order.myref
+                order.myref = bi_order.myref
 
                 del self.qbo_orders[0]
 
