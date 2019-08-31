@@ -1184,7 +1184,7 @@ class Exchange(Orderbook):
                 if verbose: print('tape_summary:')
                 for event in tape_events:
                     if event['type'] == 'Trade':
-                        total_cost += event['price']
+                        total_cost += event['price'] * event['qty']
                         total_qty += event['qty']
                         if verbose: print('total_cost=%d; total_qty=%d' % (total_cost, total_qty))
                 if total_qty > 0 :
