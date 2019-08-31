@@ -555,55 +555,66 @@ class Orderbook_half:
             # update qty of order
             order.qty = qty_remaining
 
-            if order.otype == 'Bid':
-                buyer = order
-                seller = sorted_orders[0][1]
-            elif order.otype == 'Ask':
-                seller = order
-                buyer = sorted_orders[0][1]
+            if order.subtype == sorted_orders[0][1].subtype == 'BDN':
+                pass
 
-            # buyer friendly price and qty
-            if check_size(buyer, seller) and check_price(buyer, seller):
+            else:
 
-                executed_qty = min(buyer.qty, seller.qty)
-                executed_price = seller.limitprice
-                trn = {'qty': executed_qty, 'price': executed_price}
+                if order.otype == 'Bid':
+                    buyer = order
+                    seller = sorted_orders[0][1]
+                elif order.otype == 'Ask':
+                    seller = order
+                    buyer = sorted_orders[0][1]
 
-                qty_remaining -= executed_qty
+                # buyer friendly price and qty
+                if check_size(buyer, seller) and check_price(buyer, seller):
 
-                # counterpart order is full filled
-                if qty_remaining > 0:
-                    if sorted_orders[0][1].subtype == 'BI':
-                        msg = OSR_msg(-1, 'FILL', time, sorted_orders[0][1], [trn])
-                        msg_list.append(msg)
-                        del self.orders[sorted_orders[0][0]]
+                    executed_qty = min(buyer.qty, seller.qty)
+                    executed_price = seller.limitprice
 
-                    if order.subtype == 'BI':
-                        trn_lst.append(trn)
+                    qty_remaining -= executed_qty
 
-                # both counterpart order and self order are full filled
-                elif qty_remaining == 0 and buyer.qty == seller.qty:
-                    if order.subtype == 'BI':
-                        trn_lst.append(trn)
-                        msg = OSR_msg(-1, 'FILL', time, original_order, trn_lst)
-                        msg_list.append(msg)
+                    # counterpart order is full filled
+                    if qty_remaining > 0:
 
-                    if sorted_orders[0][1].subtype == 'BI':
-                        msg = OSR_msg(-1, 'FILL', time, sorted_orders[0][1], [trn])
-                        msg_list.append(msg)
-                        del self.orders[sorted_orders[0][0]]
+                        if sorted_orders[0][1].subtype == 'BI':
+                            trn = {'oid': order.orderid, 'qty': executed_qty, 'price': executed_price, 'subtype': order.subtype}
+                            msg = OSR_msg(-1, 'FILL', time, sorted_orders[0][1], [trn])
+                            msg_list.append(msg)
+                            del self.orders[sorted_orders[0][0]]
 
-                # self order is full filled
-                elif qty_remaining == 0 and buyer.qty != seller.qty:
-                    if order.subtype == 'BI':
-                        trn_lst.append(trn)
-                        msg = OSR_msg(-1, 'FILL', time, original_order, trn_lst)
-                        msg_list.append(msg)
+                        if order.subtype == 'BI':
+                            trn = {'oid': sorted_orders[0][1].orderid, 'qty': executed_qty, 'price': executed_price, 'subtype': sorted_orders[0][1].subtype}
+                            trn_lst.append(trn)
 
-                    if sorted_orders[0][1].subtype == 'BI':
-                        msg = OSR_msg(-1, 'PARTIAL', time, sorted_orders[0][1], [trn])
-                        msg_list.append(msg)
-                        self.orders[sorted_orders[0][0]].qty -= executed_qty
+                    # both counterpart order and self order are full filled
+                    elif qty_remaining == 0 and buyer.qty == seller.qty:
+                        if order.subtype == 'BI':
+                            trn = {'oid': sorted_orders[0][1].orderid, 'qty': executed_qty, 'price': executed_price, 'subtype': sorted_orders[0][1].subtype}
+                            trn_lst.append(trn)
+                            msg = OSR_msg(-1, 'FILL', time, original_order, trn_lst)
+                            msg_list.append(msg)
+
+                        if sorted_orders[0][1].subtype == 'BI':
+                            trn = {'oid': order.orderid, 'qty': executed_qty, 'price': executed_price, 'subtype': order.subtype}
+                            msg = OSR_msg(-1, 'FILL', time, sorted_orders[0][1], [trn])
+                            msg_list.append(msg)
+                            del self.orders[sorted_orders[0][0]]
+
+                    # self order is full filled
+                    elif qty_remaining == 0 and buyer.qty != seller.qty:
+                        if order.subtype == 'BI':
+                            trn = {'oid': sorted_orders[0][1].orderid, 'qty': executed_qty, 'price': executed_price, 'subtype': sorted_orders[0][1].subtype}
+                            trn_lst.append(trn)
+                            msg = OSR_msg(-1, 'FILL', time, original_order, trn_lst)
+                            msg_list.append(msg)
+
+                        if sorted_orders[0][1].subtype == 'BI':
+                            trn = {'oid': order.orderid, 'qty': executed_qty, 'price': executed_price, 'subtype': order.subtype}
+                            msg = OSR_msg(-1, 'PARTIAL', time, copy.copy(sorted_orders[0][1]), [trn])
+                            msg_list.append(msg)
+                            self.orders[sorted_orders[0][0]].qty -= executed_qty
 
             del sorted_orders[0]
 
