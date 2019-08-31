@@ -1338,12 +1338,6 @@ class Discovery(Orderbook):
             size_diff = (bi_order.qty - order.qty)/bi_order.qty
             score = 100 - 50 * np.tanh(size_diff)/np.tanh(1)
 
-        # record the reputation score
-        if order.tid not in self.repu_recs:
-            self.repu_recs[order.tid] = []
-            # initial score is 100
-            self.repu_recs[order.tid].append(100)
-
         self.repu_recs[order.tid].append(score)
         return calculate_composite_score(self.repu_recs[order.tid])
 
@@ -1353,10 +1347,11 @@ class Discovery(Orderbook):
 
     def process_order(self, time, order, verbose):
 
-        # cancel BI order when its reputation is lower than threshold
-        threshold = 50
-        if self.repu_recs[order.tid] < threshold:
-            return {'tape_summary':None, 'trader_msgs':None}
+        # record the reputation score
+        if order.tid not in self.repu_recs:
+            self.repu_recs[order.tid] = []
+            # initial score is 100
+            self.repu_recs[order.tid].append(100)
 
         osubtype = order.subtype
         book = self.bi
@@ -1722,6 +1717,8 @@ def customer_orders(time, last_update, traders, trader_stats, os, pending, base_
                 # order = Order(tname, ordertype, orderstyle, orderprice, orderqty, issuetime, None, oid)
                 order = Assignment("CUS", tname, ordertype, orderstyle, orderprice, orderqty, issuetime, None, oid)
                 oid += 1
+                if order.qty < 200:
+                    print('Why')
                 new_pending.append(order)
 
             # supply side (sellers)
@@ -1738,6 +1735,8 @@ def customer_orders(time, last_update, traders, trader_stats, os, pending, base_
                 # order = Order(tname, ordertype, orderstyle, orderprice, orderqty, issuetime, None, oid)
                 order = Assignment("CUS", tname, ordertype, orderstyle, orderprice, orderqty, issuetime, None, oid)
                 oid += 1
+                if order.qty < 200:
+                    print('Why')
                 new_pending.append(order)
         else:
             # there are pending future orders: issue any whose timestamp is in the past
@@ -1936,9 +1935,6 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, sum
                 order.orderid = order_id
                 order_id += 1
 
-                # QBO myref will be set as same as BI order. when QBO order is generated.
-                if not order.myref:
-                    order.myref = traders[tid].orders[0].assignmentid  # attach customer order ID to this exchange order
                 if verbose: print('Order with myref=%s' % order.myref)
 
                 # Sanity check: catch bad traders here
@@ -1958,7 +1954,7 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, sum
                     tape_sum = exch_response['tape_summary']
 
                     # delete BI order in bi_quotes
-                    traders[tid].del_BI_order(exch_msg[0].oid, bookkeep_verbose)
+                    traders[tid].del_BI_order(can_order.orderid, bookkeep_verbose)
 
                 # how many quotes does this trader already have sat on an exchange?
                 if order.subtype == 'QBO' and order.ostyle == 'CAN':
@@ -2017,9 +2013,6 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, sum
                 if order.subtype == 'QBO':
                     traders[tid].reputation = discovery[0].reputation_score(order, verbose)
 
-
-                if verbose: print('Trader %s quotes[-1]: %s' % (tid, traders[tid].quotes[-1]))
-
                 # send this order to exchange and receive response
                 if order.subtype == 'BI' or order.subtype == 'BDN':
 
@@ -2040,6 +2033,7 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, sum
                     pass
                 elif order.subtype != 'BI':
                     traders[tid].quotes.append(order)
+                    if verbose: print('Trader %s quotes[-1]: %s' % (tid, traders[tid].quotes[-1]))
 
                     exch_response = exchanges[0].process_order(time, order, process_verbose)
 
