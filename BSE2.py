@@ -173,11 +173,11 @@ class Orderbook_half:
                 # update existing entry
                 qty = lob[price][0]
                 orderlist = lob[price][1]
-                orderlist.append([order.time, order.qty, order.tid, order.orderid])
+                orderlist.append([order.time, order.qty, order.tid, order.orderid, order.subtype, order.biid])
                 lob[price] = [qty + order.qty, orderlist]
             else:
                 # create a new dictionary entry
-                lob[price] = [order.qty, [[order.time, order.qty, order.tid, order.orderid]]]
+                lob[price] = [order.qty, [[order.time, order.qty, order.tid, order.orderid, order.subtype, order.biid]]]
 
         self.lob = []
         for price in lob:
@@ -244,7 +244,7 @@ class Orderbook_half:
 
         oid = order.orderid
 
-        if len(self.orders)>0 and (self.orders.get(oid) != None) :
+        if len(self.orders)>0 and (oid in self.orders) :
             if verbose: print('Deleting order %s' % oid)
             o_qty = self.orders[oid].qty
             o_type = self.booktype
@@ -275,7 +275,7 @@ class Orderbook_half:
         if verbose: print(msg)
 
 
-    def add_tapeitem(self, eventlist, pool_id, eventtype, time, price, qty, party_from, party_to, verbose):
+    def add_tapeitem(self, eventlist, pool_id, eventtype, time, price, qty, party_1, party_1_oid, party_1_subtype, party_1_biid, party_2, party_2_oid, party_2_subtyoe, party_2_biid, verbose):
         # add_tapeitem(): add an event to list of events that will be written to tape
         # event type within book_take should be 'Trade'
         tape_event = { 'pool_id': pool_id,
@@ -283,11 +283,16 @@ class Orderbook_half:
                         'time': time,
                         'price': price,
                         'qty': qty,
-                        'party1': party_from,
-                        'party2': party_to}
+                        'party1': party_1,
+                        'party1_oid': party_1_oid,
+                        'party1_subtype': party_1_subtype,
+                        'party1_biid': party_1_biid,
+                        'party2': party_2,
+                        'party2_oid': party_2_oid,
+                        'party2_subtype': party_2_subtyoe,
+                        'party2_biid': party_2_biid}
         eventlist.append(tape_event)
         if verbose: print('add_tapeitem() tape_event=%s' % tape_event)
-
 
     def book_take(self, time, order, pool_id, verbose):
         # process the order by taking orders off the LOB, consuming liquidity at the top of the book
@@ -348,10 +353,14 @@ class Orderbook_half:
         if order.otype == "Bid":
             tid_to = order.tid
             oid_to = order.orderid
+            subtype_to = order.subtype
+            biid_to = order.biid
             counterparty = 'Ask'
         elif order.otype == "Ask":
             tid_from = order.tid
             oid_from = order.orderid
+            subtype_from = order.subtype
+            biid_from = order.biid
             counterparty = 'Bid'
         else: # this shouldn't happen
             sys.exit('>book_take: order.otype=%s in book_take' % order.otype)
@@ -393,12 +402,18 @@ class Orderbook_half:
             best_lob_order_qty = best_lob_order[1]
             best_lob_order_tid = best_lob_order[2]
             best_lob_order_oid = best_lob_order[3]
+            best_lob_order_subtype = best_lob_order[4]
+            best_lob_order_biid = best_lob_order[5]
             if order.otype == "Bid":
                 tid_from = best_lob_order_tid
                 oid_from = best_lob_order_oid
+                subtype_from = best_lob_order_subtype
+                biid_from = best_lob_order_biid
             elif order.otype == "Ask":
                 tid_to = best_lob_order_tid
                 oid_to = best_lob_order_oid
+                subtype_to = best_lob_order_subtype
+                biid_to = best_lob_order_biid
 
             if verbose: print('BK_TAKE: best_lob _price=%d _order=%s qty=%d oid_from=%d oid_to=%d tid_from=%s tid_to=%s\n' %
                                 (best_lob_price, best_lob_order, best_lob_order_qty, oid_from, oid_to, tid_from, tid_to))
@@ -419,7 +434,7 @@ class Orderbook_half:
                 self.add_msg(msg_list, order.tid, order.orderid, "FILL", trnsctns, None, fee, verbose, order.otype)
 
                 # add a record of this to the tape (NB this identifies both parties to the trade, so only do it once)
-                self.add_tapeitem(tape_events, pool_id, 'Trade', time, price, qty, tid_from, tid_to, verbose)
+                self.add_tapeitem(tape_events, pool_id, 'Trade', time, price, qty, tid_from, oid_from, subtype_from, biid_from, tid_to, oid_to, subtype_to, biid_to, verbose)
 
                 # so far have dealt with effect of match on incoming order
                 # now need to deal with effect of match on best order on LOB (the other side of the deal)
@@ -460,7 +475,7 @@ class Orderbook_half:
                 self.add_msg(msg_list, best_lob_order_tid, best_lob_order_oid, "FILL", [transaction], None, fee, verbose, counterparty)
 
                 # add a record of this to the tape (NB this identifies both parties to the trade, so only do it once)
-                self.add_tapeitem(tape_events, pool_id, 'Trade', time, price, qty, tid_from, tid_to, verbose)
+                self.add_tapeitem(tape_events, pool_id, 'Trade', time, price, qty, tid_from, oid_from, subtype_from, biid_from, tid_to, oid_to, subtype_to, biid_to, verbose)
 
                 # the best LOB order is fully consumed: delete it from LOB and from order-list
                 del(self.orders[best_lob_order_oid])
