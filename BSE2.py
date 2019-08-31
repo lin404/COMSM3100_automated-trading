@@ -1291,6 +1291,10 @@ class Discovery(Orderbook):
             s = '[%s bal=%d rep=%s orders=%s msgs=%s]' % (self.tid, self.balance, self.reputation, self.orders, self.msgs)
             return s
 
+    def tape_matching(self, session_id, filename):
+        for value in self.osr_recs.values():
+            filename.write(f'{session_id}, {value}\n')
+
     # do not del the osr_recs[osrid], since QBO can be resubmitted?
     def reputation_score(self, order, verbose):
 
@@ -1419,30 +1423,30 @@ def trade_stats(expid, traders, dumpfile, time, lob):
         trader_types = {}
         n_traders = len(traders)
         for t in traders:
-                ttype = traders[t].ttype
-                if ttype in trader_types.keys():
-                        t_balance = trader_types[ttype]['balance_sum'] + traders[t].balance
-                        n = trader_types[ttype]['n'] + 1
-                else:
-                        t_balance = traders[t].balance
-                        n = 1
-                trader_types[ttype] = {'n':n, 'balance_sum':t_balance}
+            ttype = traders[t].ttype
+            if ttype in trader_types.keys():
+                t_balance = trader_types[ttype]['balance_sum'] + traders[t].balance
+                n = trader_types[ttype]['n'] + 1
+            else:
+                t_balance = traders[t].balance
+                n = 1
+            trader_types[ttype] = {'n':n, 'balance_sum':t_balance}
 
 
         dumpfile.write('%s, %06d, ' % (expid, time))
         for ttype in sorted(list(trader_types.keys())):
-                n = trader_types[ttype]['n']
-                s = trader_types[ttype]['balance_sum']
-                dumpfile.write('%s, %d, %d, %f, ' % (ttype, s, n, s / float(n)))
+            n = trader_types[ttype]['n']
+            s = trader_types[ttype]['balance_sum']
+            dumpfile.write('%s, %d, %d, %f, ' % (ttype, s, n, s / float(n)))
 
         if lob['bids']['bestp'] != None :
-                dumpfile.write('%d, ' % (lob['bids']['bestp']))
+            dumpfile.write('%d, ' % (lob['bids']['bestp']))
         else:
-                dumpfile.write('N, ')
+            dumpfile.write('N, ')
         if lob['asks']['bestp'] != None :
-                dumpfile.write('%d, ' % (lob['asks']['bestp']))
+            dumpfile.write('%d, ' % (lob['asks']['bestp']))
         else:
-                dumpfile.write('N, ')
+            dumpfile.write('N, ')
         dumpfile.write('\n')
 
 
@@ -1752,20 +1756,20 @@ def customer_orders(time, last_update, traders, trader_stats, os, pending, base_
 
 # one session in the market
 def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, summaryfile, tapedumpfile, blotterdumpfile,
-                   dump_each_trade, verbose):
+                    matchingfile, dump_each_trade, verbose):
 
         n_exchanges = 1
 
         tape_depth = 5 # number of most-recent items from tail of tape to be published at any one time
 
-        verbosity = False
+        verbosity = True
 
         verbose = verbosity             # main loop verbosity
         orders_verbose = verbosity
-        lob_verbose = False
-        process_verbose = False
-        respond_verbose = False
-        bookkeep_verbose = False
+        lob_verbose = True
+        process_verbose = True
+        respond_verbose = True
+        bookkeep_verbose = True
 
         fname = 'prices' + sess_id +'.csv'
         prices_data_file = open(fname, 'w')
@@ -2076,6 +2080,9 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, sum
         # end of an experiment -- dump the tape
         exchanges[0].dump_tape(sess_id, tapedumpfile, 'keep')
 
+        # print out the matching orders in Discovery service
+        discovery[0].tape_matching(sess_id, matchingfile)
+
         # traders dump their blotters
         for t in traders:
             tid = traders[t].tid
@@ -2151,6 +2158,9 @@ if __name__ == "__main__":
         fname = sess_id + 'blotters.csv'
         blotter_data_file = open(fname, 'w')
 
-        market_session(sess_id, start_time, end_time, traders_spec, order_sched, summary_data_file, tape_data_file, blotter_data_file, True, False)
+        fname = sess_id + 'matching.csv'
+        matching_data_file = open(fname, 'w')
+
+        market_session(sess_id, start_time, end_time, traders_spec, order_sched, summary_data_file, tape_data_file, blotter_data_file, matching_data_file, True, False)
 
     print('\n Experiment Finished')
