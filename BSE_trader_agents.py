@@ -59,19 +59,22 @@ class Trader:
 
 
         def add_cust_order(self, order, verbose):
-                # add a customer order to trader's records
-                # currently LAZY: keeps to within max_cust_orders by appending new order and deleting head self.orders
-                if len(self.quotes) > 0:
-                    # this trader has a live quote on the LOB, from a previous customer order
-                    # need response to signal cancellation/withdrawal of that quote
-                    response = 'LOB_Cancel'
-                else:
-                    response = 'Proceed'
-                if len(self.orders) >= self.max_cust_orders:
-                        self.orders = self.orders[1:]
-                self.orders.append(order)
-                if verbose: print('add_order < response=%s self.orders=%s' % (response, str(self.orders)))
-                return response
+            # add a customer order to trader's records
+            # currently LAZY: keeps to within max_cust_orders by appending new order and deleting head self.orders
+            if len(self.quotes) > 0:
+                # this trader has a live quote on the LOB, from a previous customer order
+                # need response to signal cancellation/withdrawal of that quote
+                response = 'LOB_Cancel'
+            else:
+                response = 'Proceed'
+            if len(self.orders) >= self.max_cust_orders:
+                    self.orders = self.orders[1:]
+
+            if order.qty < 200:
+                print('Why')
+            self.orders.append(order)
+            if verbose: print('add_order < response=%s self.orders=%s' % (response, str(self.orders)))
+            return response
 
 
         # delete a customer order from trader's list of orders being worked
@@ -512,17 +515,27 @@ class Trader_ZIP(Trader):
 
                         # set limitprice and MES
                         limitprice = quoteprice
-                        MES = 1
+                        MES = 0
+                        marketid = None
 
                         # only big block order can be BI or BDN order
                         subtype = None
                         big_block = 200
 
+                        # cancel BI order when its reputation is lower than threshold
+                        threshold = 50
+                        if self.reputation < threshold:
+                            self.biweight = 0
+
                         if self.orders[0].qty >= big_block:
-                            subtype = random.choices(population=['BI','BDN', None],weights=[self.biweight, self.bdnweight, 1-self.bdnweight],k=1)[0]
+                            subtype = random.choices(population=['BI','BDN', None],weights=[0.5, 0.5, 0],k=1)[0]
 
-                        order = Order(self.tid, self.job, "LIM", quoteprice, self.orders[0].qty, time, None, -1, limitprice, MES, subtype, None)
+                        order = Order(self.tid, self.job, "LIM", quoteprice, self.orders[0].qty, time, None, -1, limitprice, MES, subtype, marketid)
 
+                        order.myref = self.orders[0].assignmentid
+
+                        if self.orders[0].qty < big_block:
+                            print('Why')
                         if subtype != 'BI':
                             self.lastquote = order
 
