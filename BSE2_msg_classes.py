@@ -29,7 +29,7 @@ class Assignment:
 # The order-style may require additional parameters which are bundled into style_params (=None if not)
 class Order:
 
-    def __init__(self, trader_id, otype, ostyle, price, qty, time, endtime, orderid, limitprice=0, MES=0, subtype=None, marketid=None, osrid=-1):
+    def __init__(self, trader_id, otype, ostyle, price, qty, time, endtime, orderid, limitprice=0, MES=0, subtype=None, marketid=None, osrid=-1, biid=-1):
         self.tid = trader_id    # trader i.d.
         # order type (bid or ask -- what side of LOB is it for)
         self.otype = otype
@@ -47,10 +47,11 @@ class Order:
 
         self.limitprice = limitprice
         self.MES = MES
-        self.subtype = subtype  # order sub type of BI or BDN
+        self.subtype = subtype  # order sub type of BI or BDN or QBO
         self.marketid = marketid
 
         self.osrid = osrid
+        self.biid = biid       # if it is QBO, record its original BI id
 
     def __str__(self):
         return '[%s %s %s P=%03d Q=%s T=%5.2f OID:%d Params=%s MyRef=%s SubType=%s]' % \
@@ -88,6 +89,7 @@ class OSR_msg:
         self.time = time
         self.order = order
         self.trns = transactions
+        self.tag = True
 
     def __str__(self):
         return 'OSRID:%d Event:%s TIME:%s ORDER:%s Trns:%s' % (self.osrid, self.eventtype, self.time, self.order, str(self.trns))
