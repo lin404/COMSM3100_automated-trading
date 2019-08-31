@@ -430,7 +430,7 @@ class Trader_ZIP(Trader):
         #    so a single trader can both buy AND sell
         #    -- in the original, traders were either buyers OR sellers
 
-        def __init__(self, ttype, tid, balance, time, biweight=0, bdnweight=0, reputation=0):
+        def __init__(self, ttype, tid, balance, time, biweight=0, bdnweight=0, reputation=100):
                 Trader.__init__(self, ttype, tid, balance, time, biweight, bdnweight, reputation)
                 m_fix = 0.05
                 m_var = 0.05
@@ -536,6 +536,7 @@ class Trader_ZIP(Trader):
 
             else:
                 osrid = self.qbo_orders[0].osrid
+                biid = self.qbo_orders[0].order.orderid
 
                 bi_order = self.qbo_orders[0].order
                 qty = bi_order.qty
@@ -561,10 +562,10 @@ class Trader_ZIP(Trader):
                         total_price += trn['price']*trn['qty']
                         total_qty += trn['qty']
 
-                    price = total_price/total_qty
-                    # qty = random.randint(total_qty, qty)
+                #     price = total_price/total_qty
+                #     qty = random.randint(total_qty, qty)
 
-                    order = Order(self.tid, self.job, "LIM", price, qty, time, None, -1, limitprice, MES, subtype, 'Drk', osrid)
+                    order = Order(self.tid, self.job, "LIM", price, qty, time, None, -1, limitprice, MES, subtype, 'Drk', osrid, biid)
                     self.lastquote = order
 
                 order.myref = bi_order.myref
