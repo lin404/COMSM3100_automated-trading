@@ -1036,14 +1036,20 @@ class Exchange(Orderbook):
 
 
         # which pool does it get sent to: Lit or Dark?
-        if order.qty < block_size and order.marketid and 'Drk' not in order.marketid:
-            if verbose: print('Process_order: qty=%d routes to LIT pool' % order.qty)
-            pool = self.lit
-            order.marketid = self.eid + 'Lit'
+        if not order.marketid:
+            if order.qty < block_size:
+                pool = self.lit
+                order.marketid = self.eid + 'Lit'
+            else:
+                pool = self.drk
+                order.marketid = self.eid + 'Drk'
         else:
-            if verbose: print('Process_order: qty=%d routes to DARK pool' % order.qty)
-            pool = self.drk
-            order.marketid = self.eid + 'Drk'
+            if 'Lit' in order.marketid:
+                pool = self.lit
+                order.marketid = self.eid + 'Lit'
+            elif 'Drk' in order.marketid:
+                pool = self.drk
+                order.marketid = self.eid + 'Drk'
 
         # Cancellations don't generate new order-ids
         if ostyle == 'CAN':
