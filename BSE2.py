@@ -1295,6 +1295,11 @@ class Discovery(Orderbook):
         for value in self.osr_recs.values():
             filename.write(f'{session_id}, {value}\n')
 
+    # increase the possibility
+    def active_traders(self):
+        require_QBO_traders = [osr.order.tid for osr in self.osr_recs.values() if osr.tag]
+        return require_QBO_traders
+
     # do not del the osr_recs[osrid], since QBO can be resubmitted?
     def reputation_score(self, order, verbose):
 
@@ -1324,6 +1329,7 @@ class Discovery(Orderbook):
             composite_score = round(composite_score/sum(range(weighting, 100)))
             return composite_score
 
+        self.osr_recs[order.osrid].tag = False
         bi_order = self.osr_recs[order.osrid].order
         if not marketable(order, bi_order):
             score = 0
@@ -1695,7 +1701,7 @@ def customer_orders(time, last_update, traders, trader_stats, os, pending, base_
         max_qty = 300
 
         # weight of generating lit orders or drk orders
-        lit_weight = 0.5
+        lit_weight = 0
         drk_weight = 1
 
         if len(pending) < 1:
@@ -1897,15 +1903,23 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, sum
             while tid == old_tid:
                 tid = list(traders.keys())[random.randint(0, len(traders) - 1)]
 
+            if discovery[0].active_traders():
+                tid = discovery[0].active_traders()[0]
+
             # customer order or QBO
             count1 = len(traders[tid].orders)
             count2 = len(traders[tid].qbo_orders)
-            if count1 > 0 or count2 > 0:
-                num1 = count1/(count1+count2)
-                num2 = count2/(count1+count2)
+            # if count1 > 0 or count2 > 0:
+            #     num1 = count1/(count1+count2)
+            #     num2 = count2/(count1+count2)
+            # else:
+            #     num1 = count1
+            #     num2 = count2
+            num1, num2 = 1,1
+            if count2 > 0:
+                num1, num2 = 0, 1
             else:
-                num1 = count1
-                num2 = count2
+                num1, num2 = 1, 0
 
             ordergenerator = random.choices(population=[traders[tid].getorder, traders[tid].generate_QBO],weights=[num1, num2],k=1)[0]
 
