@@ -552,9 +552,6 @@ class Orderbook_half:
 
         while qty_remaining > 0 and len(sorted_orders) > 0:
 
-            # update qty of order
-            order.qty = qty_remaining
-
             if order.subtype == sorted_orders[0][1].subtype == 'BDN':
                 pass
 
@@ -615,6 +612,11 @@ class Orderbook_half:
                             msg = OSR_msg(-1, 'PARTIAL', time, copy.copy(sorted_orders[0][1]), [trn])
                             msg_list.append(msg)
                             self.orders[sorted_orders[0][0]].qty -= executed_qty
+
+                    # overflow
+                    elif qty_remaining < 0:
+                        qty_remaining += executed_qty
+                        break
 
             del sorted_orders[0]
 
