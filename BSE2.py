@@ -2015,22 +2015,8 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, sum
                 if order.subtype == 'QBO':
                     traders[tid].reputation = discovery[0].reputation_score(order, verbose)
 
+
                 # send this order to exchange and receive response
-                if order.subtype == 'BI' or order.subtype == 'BDN':
-
-                    if order.subtype == 'BI':
-                        traders[tid].bi_quotes.append(order)
-
-                    exch_response = discovery[0].process_order(time, order, process_verbose)
-
-                    exch_msgs = exch_response['trader_msgs']
-                    tape_sum = exch_response['tape_summary']
-
-                    if exch_msgs != None and len(exch_msgs) > 0:
-                        for msg in exch_msgs:
-                            traders[msg.order.tid].add_QBO_order(msg, time, bookkeep_verbose)
-
-
                 if order.subtype == 'QBO' and order.ostyle == 'CAN':
                     pass
                 elif order.subtype != 'BI':
@@ -2062,6 +2048,22 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, sum
                             # delete full filled BDN order on Discovery
                             if msg.event == 'FILL':
                                 discovery[0].del_BDN(msg.oid, msg.otype, verbose)
+
+
+                # send this order to Discovery and receive response
+                if order.subtype == 'BI' or order.subtype == 'BDN':
+
+                    if order.subtype == 'BI':
+                        traders[tid].bi_quotes.append(order)
+
+                    exch_response = discovery[0].process_order(time, order, process_verbose)
+
+                    exch_msgs = exch_response['trader_msgs']
+                    tape_sum = exch_response['tape_summary']
+
+                    if exch_msgs != None and len(exch_msgs) > 0:
+                        for msg in exch_msgs:
+                            traders[msg.order.tid].add_QBO_order(msg, time, bookkeep_verbose)
 
                 # traders respond to whatever happened
                 # needs to be updated for multiple exchanges
