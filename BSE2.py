@@ -1705,11 +1705,11 @@ def customer_orders(time, last_update, traders, trader_stats, os, pending, base_
 
         min_qty = 1
         mid_qty = 200 # equal to the block_size
-        max_qty = 300
+        max_qty = 400
 
         # weight of generating lit orders or drk orders
-        lit_weight = 0
-        drk_weight = 1
+        lit_weight = 0.5
+        drk_weight = 0.5
 
         if len(pending) < 1:
             # list of pending (to-be-issued) customer orders is empty, so generate a new one
@@ -1779,14 +1779,14 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, sum
 
         tape_depth = 5 # number of most-recent items from tail of tape to be published at any one time
 
-        verbosity = True
+        verbosity = False
 
         verbose = verbosity             # main loop verbosity
         orders_verbose = verbosity
-        lob_verbose = True
-        process_verbose = True
-        respond_verbose = True
-        bookkeep_verbose = True
+        lob_verbose = False
+        process_verbose = False
+        respond_verbose = False
+        bookkeep_verbose = False
 
         fname = 'prices' + sess_id +'.csv'
         prices_data_file = open(fname, 'w')
@@ -1920,17 +1920,15 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, sum
             # customer order or QBO
             count1 = len(traders[tid].orders)
             count2 = len(traders[tid].qbo_orders)
-            # if count1 > 0 or count2 > 0:
-            #     num1 = count1/(count1+count2)
-            #     num2 = count2/(count1+count2)
-            # else:
-            #     num1 = count1
-            #     num2 = count2
             num1, num2 = 1,1
             if count2 > 0:
                 num1, num2 = 0, 1
             else:
                 num1, num2 = 1, 0
+
+            # if count1 > 0 or count2 > 0:
+            #     num1 = count1/(count1+count2)
+            #     num2 = count2/(count1+count2)
 
             ordergenerator = random.choices(population=[traders[tid].getorder, traders[tid].generate_QBO],weights=[num1, num2],k=1)[0]
 
