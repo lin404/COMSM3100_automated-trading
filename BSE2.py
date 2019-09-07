@@ -2015,6 +2015,9 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, sum
                 if order.subtype == 'QBO':
                     traders[tid].reputation = discovery[0].reputation_score(order, verbose)
 
+                # confirm if BDN has been fully traded in Dark Pool
+                # if so, do not trigger Discovery service
+                flg = True
 
                 # send this order to exchange and receive response
                 if order.subtype == 'QBO' and order.ostyle == 'CAN':
@@ -2045,13 +2048,19 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, sum
                             if verbose: print('Message: %s' % msg)
                             traders[msg.tid].bookkeep(msg, time, bookkeep_verbose)
 
-                            # delete full filled BDN order on Discovery
+                            # not add/remove fully filled BDN order in Discovery
+                            # not add partially filled BDN order to Discovery
                             if msg.event == 'FILL':
                                 discovery[0].del_BDN(msg.oid, msg.otype, verbose)
+                                if msg.oid == order.orderid and order.subtype == 'BDN':
+                                    flg = False
+                            elif msg.event == 'PART' and msg.revo.subtype == 'BDN':
+                                if msg.oid == order.orderid:
+                                    flg = False
 
 
                 # send this order to Discovery and receive response
-                if order.subtype == 'BI' or order.subtype == 'BDN':
+                if order.subtype == 'BI' or (order.subtype == 'BDN' and flg):
 
                     if order.subtype == 'BI':
                         traders[tid].bi_quotes.append(order)
