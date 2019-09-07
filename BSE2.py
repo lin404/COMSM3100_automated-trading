@@ -999,13 +999,22 @@ class Exchange(Orderbook):
             # print('%s' % ti)
             pass
 
+        drk = 0
+        lit = 0
         for tapeitem in self.tape:
             # print('tape_dump: tapitem=%s' % tapeitem)
             if tapeitem['type'] == 'Trade':
                 dumpfile.write('%s, %s, %s, %s, %s\n' % (session_id, tapeitem['pool_id'], tapeitem['time'], tapeitem['price'], str(tapeitem)))
+                if 'Lit' in tapeitem['pool_id']:
+                    lit += 1
+                elif 'Drk' in tapeitem['pool_id']:
+                    drk += 1
+        dumpfile.write(f'lit={lit}, drk={drk}')
 
         if tmode == 'wipe':
             self.tape = []
+
+        return self.tape
 
 
     def process_order(self, time, order, verbose):
@@ -1296,6 +1305,7 @@ class Discovery(Orderbook):
     def tape_matching(self, session_id, filename):
         for value in self.osr_recs.values():
             filename.write(f'{session_id}, {value}\n')
+        return self.osr_recs.values()
 
     # increase the possibility
     def active_traders(self):
@@ -2099,10 +2109,62 @@ def market_session(sess_id, starttime, endtime, trader_spec, order_schedule, sum
             time = time + timestep
 
         # end of an experiment -- dump the tape
-        exchanges[0].dump_tape(sess_id, tapedumpfile, 'keep')
+        trading_data = exchanges[0].dump_tape(sess_id, tapedumpfile, 'keep')
 
         # print out the matching orders in Discovery service
-        discovery[0].tape_matching(sess_id, matchingfile)
+        matching_data = discovery[0].tape_matching(sess_id, matchingfile)
+
+        matching = []
+        BI = set()
+        for match in matching_data:
+            BI.add(match.order.orderid)
+            for trn in match.trns:
+                lst = []
+                lst.append(match.order.orderid)
+                lst.append(trn['oid'])
+                lst.sort()
+                if lst not in matching:
+                    matching.append(lst)
+
+        trading = []
+        QBO = set()
+        for trade in trading_data:
+
+            if trade['type'] == 'Trade':
+                if trade['party1_subtype'] == 'QBO':
+                    QBO.add(trade['party1_biid'])
+                if trade['party2_subtype'] == 'QBO':
+                    QBO.add(trade['party2_biid'])
+
+                lst = []
+                if trade['party1_subtype'] == 'QBO' or trade['party2_subtype'] == 'QBO':
+                    if trade['party1_subtype'] == 'BDN':
+                        lst.append(trade['party1_oid'])
+                    elif trade['party1_subtype'] == 'QBO':
+                        lst.append(trade['party1_biid'])
+                    else:
+                        lst.append(-1)
+
+                    if trade['party2_subtype'] == 'BDN':
+                        lst.append(trade['party2_oid'])
+                    elif trade['party2_subtype'] == 'QBO':
+                        lst.append(trade['party2_biid'])
+                    else:
+                        lst.append(-1)
+
+                if len(lst) > 0:
+                    lst.sort()
+                    trading.append(lst)
+
+        count = 0
+        for trade in trading:
+            if trade in matching:
+                count += 1
+
+        print(f'HOW many matching is traded = {count}, matching={len(matching)}, trading={len(trading)}')
+        print(f'matching={matching}, trading={trading}')
+
+        print(f'BI={len(BI)}, QBO={len(QBO)}')
 
         # traders dump their blotters
         for t in traders:
